@@ -73,9 +73,11 @@ Step-by-step workflow:
 
 ## Python
 
+We'll use the latest `Python` version, `3.13.1` as of now.
+
 A general style guide for a nice `Python` code can be found [here](https://peps.python.org/pep-0008/) (I might introduce some automatic formatters for the code later to make your life easier).
 
-I'd recommend to setup a virtual environmet for the `Python` (thing that allows you to separate packages version for different projects). You can do it [the easy way](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#create-and-use-virtual-environments) or, if you'll have more `Python` project in future, my way:
+I'd recommend to setup a virtual environmet for the `Python` (thing that allows you to separate packages version for different projects). You can do it [the easy way](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#create-and-use-virtual-environments) or, if you'll have more `Python` project in future, my way (whenever your cmd in the repository with `.python-version` file, correct virtual environment will be activatet automatically):
 
 1. Install https://github.com/pyenv/pyenv (not an advanced installation)
 2. Install https://github.com/pyenv/pyenv-virtualenv
