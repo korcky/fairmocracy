@@ -6,7 +6,7 @@ Most (if not all) of the information will be relevant to all the contributors, t
 ## Git
 
 
-### Setupping Git
+### Setting up Git
 
 [Quick setting](https://docs.github.com/en/get-started/getting-started-with-git/set-up-git#setting-up-git) up of the `git`
 
@@ -18,7 +18,7 @@ To start the development, you'll need to have a code of the repository locally o
     ```bash
     $ git clone https://github.com/korcky/fairmocracy.git
     ```
-2. Using SHH key:
+2. Using SSH key:
     ```bash
     $ git clone git@github.com:korcky/fairmocracy.git
     ```
@@ -28,7 +28,7 @@ To start the development, you'll need to have a code of the repository locally o
     ```
 
 
-### Contributing wokflow
+### Contributing workflow
 
 The `main` branch will be protected: the only way to add/change the code is through Pull Requests (PRs).
 
@@ -40,7 +40,11 @@ Step-by-step workflow:
     ```
 2. Pull latest version of the code in from the `main` branch:
     ```bash
-    $ git checkout pull
+    $ git pull
+    ```
+    Or optionally specifying the remote and branch:
+    ```bash
+    $ git pull origin main
     ```
 3. Create a new branch locally:
     ```bash
@@ -50,8 +54,9 @@ Step-by-step workflow:
     2. If you want to be fancy you might follow this naming pattern `<type>[/<task id>]/<short description>`, e.g.:
         1. You're adding a new purple party: `feat/add_purple_party` or `feat/task-2/add_purple_party`
         2. You're fixing a bug with yellow party: `fix/yellow_party_no_votes` or `feat/task-42/yellow_party_no_votes`
-4. Make desiered changes to the code (e.g. you've created `new_file` and made changes to `old_file`)
-5. Add files requiered files to the commit: 
+4. Make desired changes to the code (e.g. you've created `new_file` and made changes to `old_file`)
+
+5. Add required files to the commit: 
     ```bash
     $ git add new_file old_file
     ```
@@ -67,8 +72,9 @@ Step-by-step workflow:
 8. Create a PR:
     1. Go to GitHub interface, into `Pull requests` tab
     2. Click on `New pull request`
-    3. Chooce your branch as a traget to be merge into the `main` branch
+    3. Choose your branch as a target to be merge into the `main` branch
 9. Wait for a review and when it's done click `merge`
+
 
 
 ## Python
