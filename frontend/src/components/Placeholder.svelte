@@ -1,4 +1,4 @@
-<section class="card max-w-sm mx-auto text-center my-8">
+<section class="card mx-auto my-8 max-w-sm text-center">
 	<div class="space-y-4 p-4">
 		<div class="placeholder"></div>
 		<div class="grid grid-cols-3 gap-8">
@@ -21,6 +21,4 @@
 </section>
 
 <style>
-
 </style>
-

@@ -27,7 +27,7 @@
 		margin: 0 auto;
 	}
 
-    .logo {
-        font-size: 2rem;
-    }
+	.logo {
+		font-size: 2rem;
+	}
 </style>

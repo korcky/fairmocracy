@@ -1,10 +1,10 @@
 <script>
-    import LogoClouds from "./LogoClouds.svelte";
+	import LogoClouds from './LogoClouds.svelte';
 </script>
 
 <footer class="footer">
 	<aside>
 		<p>Ugly footer.</p>
 	</aside>
-    <LogoClouds />
+	<LogoClouds />
 </footer>
