@@ -10,9 +10,11 @@ This is a Svelte/SvelteKit web application for our project's frontend. This READ
 Ensure you have the following installed before contributing:
 
 - **npm, Node.js:**
+
   - The recommended approach for installing npm (and Node.js) is installing a Node Version Manager (nvm), which allows you to install multiple versions of Node.js and npm. You can install nvm on Windows, macOS, and Linux -- the installation instructions are available at https://github.com/nvm-sh/nvm.
 
     Node version used is the latest LTS version which you can get after installing **nvm** by running:
+
     ```bash
     nvm install --lts
     ```
@@ -87,4 +89,3 @@ Preview the production build locally:
 ```bash
 npm run preview
 ```
-
