@@ -19,7 +19,7 @@ export default {
 		typography,
 		forms,
 		skeleton({
-			themes: { preset: ['skeleton'] }
+			themes: { preset: [{ name: 'skeleton', enhancements: true }] }
 		})
 	]
 };

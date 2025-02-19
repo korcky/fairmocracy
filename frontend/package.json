@@ -57,5 +57,8 @@
 		"typescript": "^5.3.2",
 		"vite": "^6.0.0",
 		"vitest": "^3.0.0"
+	},
+	"dependencies": {
+		"@jsrob/svelte-portal": "^0.2.1"
 	}
 }

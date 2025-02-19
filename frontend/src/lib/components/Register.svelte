@@ -1,3 +1,5 @@
+<p class="p-4 text-center text-lg">Please enter your name and select the party you represent.</p>
+
 <div class="form-container">
 	<div class="fields">
 		<div class="field">
@@ -17,7 +19,7 @@
 
 <style>
 	.form-container {
-		max-width: 50%;
+		max-width: 90%;
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
@@ -28,9 +30,8 @@
 	.fields {
 		display: flex;
 		justify-content: center;
-		align-items: flex-start;
+		flex-direction: column;
 		gap: 1rem;
-		width: 100%;
 	}
 
 	.field {
