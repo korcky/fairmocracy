@@ -10,5 +10,11 @@ export default defineConfig({
 
 	ssr: {
 		noExternal: ['@skeletonlabs/skeleton']
+	},
+
+	preview: {
+		host: '0.0.0.0',
+		port: Number(process.env.PORT) || 10000,
+		allowedHosts: ['fairmocracy.onrender.com']
 	}
 });
