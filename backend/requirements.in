@@ -1,0 +1,4 @@
+fastapi
+fastapi[standard]  # TODO: move to a proper WSGI
+sqlalchemy
+sqlmodel
