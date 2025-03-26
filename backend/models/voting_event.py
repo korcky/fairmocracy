@@ -10,6 +10,6 @@ class VotingEvent(SQLModel, table=True):
     __tablename__ = "voting_event"
     id: int | None = Field(default=None, primary_key=True)
     subject: str = Field()
-    game_id: int = Field(foreign_key="game.id")
-    game: "Game" = Relationship(back_populates="voting_events")
+    round_id: int = Field(foreign_key="round.id")
+    round: "Round" = Relationship(back_populates="voting_events")
     votes: list["Vote"] = Relationship(back_populates="voting_event")
