@@ -63,11 +63,15 @@ async def login(key: str | None = None):
 
 
 @game_router.get(
-    "/current_state",
+    "/current_state/{game_id}",
     tags=["voting"],
 )
-async def get_current_state():
-    return Response(status_code=HTTPStatus.NO_CONTENT)
+async def get_current_state(game_id: int):
+    with Session(engine) as session:
+        game = session.exec(select(Game).where(Game.id == game_id)).first()
+        return game.state
+    
+    
 
 
 @game_router.post(
