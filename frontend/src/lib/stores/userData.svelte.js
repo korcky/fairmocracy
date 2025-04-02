@@ -5,8 +5,10 @@ import { browser } from '$app/environment'
 
 export const currentUser = writable( (browser && JSON.parse(localStorage.getItem("userData"))) ||{
   name: "",
-  party: "",
-  game: null
+  game: null,
+  userId: null,
+  affiliations: [],
+  rounds: []
 });
 
 
@@ -16,11 +18,13 @@ currentUser.subscribe((value) => {
   } 
 });
 
-export const setUserData = ({name, party, game}) => {
+export const setUserData = ({name, game, userId, affiliations, rounds}) => {
   currentUser.set({
     name: name || "",
-    party: party || "",
     game: game || null,
+    userId: userId || null,
+    affiliations: affiliations || [],
+    rounds: rounds || []
   });
 };
 

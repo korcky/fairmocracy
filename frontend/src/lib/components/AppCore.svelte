@@ -1,27 +1,43 @@
 <script>
-	import RegisterScreen from './RegisterScreen.svelte';
+	import RegisterToVoteScreen from './RegisterToVoteScreen.svelte';
 	import WelcomeScreen from './WelcomeScreen.svelte';
 	import VoteInfoScreen from '$lib/components/VoteInfoScreen.svelte';
 	import VoteScreen from '$lib/components/VoteScreen.svelte';
 	import VoteWaitScreen from '$lib/components/VoteWaitScreen.svelte';
 	import GameSelectionScreen from '$lib/components/GameSelectionScreen.svelte';
+	import RegisterScreen from './RegisterScreen.svelte';
 	import { currentUser } from '$lib/stores/userData.svelte.js';
+	
 	// First landing on the page renders the regisster view
-	const { game, name, party } = $currentUser;
-	console.log(game, name, party)
+	const { game, name, affiliations, userId } = $currentUser;
 	let currentScreen = $state('select');
 	const handleSelect = () => {
 		currentScreen = 'register';
 	}
 	if (game) {
-		currentScreen = 'register';
-		if (name && party) {
+		if (name) {
+			if (affiliations[game.current_round]) {
 			currentScreen = 'welcome';
+		} else {
+			currentScreen = 'registerToVote';
+		
+		} } else {
+			currentScreen = 'register'
 		}
+	} else {
+		currentScreen = 'select';
+	}
+
+	if (game && game.state.active) {
+		currentScreen = 'vote'
 	}
 
 	// After succesfully registered, go to wait room
 	const handleRegistration = () =>  {
+		currentScreen = 'registerToVote';
+	}
+
+	const handleRegisterToVote = () => {
 		currentScreen = 'welcome';
 	}
 
@@ -48,6 +64,8 @@
 	<GameSelectionScreen onSelect={handleSelect} />
 {:else if currentScreen == 'register'}
 	<RegisterScreen onRegistration={handleRegistration} />
+{:else if currentScreen == 'registerToVote'}
+	<RegisterToVoteScreen onRegistration={handleRegisterToVote} />
 {:else if currentScreen == 'welcome'}
 	<WelcomeScreen onNewVote={handleNewVote} />
 {:else if currentScreen == 'info'}
