@@ -10,9 +10,6 @@
 	let {game} = $currentUser;
 	let partyOptions = $state([]);
 	
-	$inspect(game)
-	$inspect(partyOptions)
-	$inspect(party)
 	$effect(() => {
 		if (game) {
 			fetch(`${PUBLIC_BACKEND_URL}/parties/game/${game.id}`).then((res) => {
@@ -27,7 +24,7 @@
 	
 	let formValidator = z.object({
 		name: z.string().nonempty('Name is required'),
-		party: z.string()
+		party: z.string().nonempty('Select your party')
 	});
 
 	const register = () => {
@@ -84,7 +81,8 @@
 				name="party"
 				onchange={(e) => (party = e.target.value)}
 				class="select variant-form-material"
-			>	
+			>
+			<option value="" disabled selected>Select your party</option>
 			{#if game}
 				{#each partyOptions as p}
 					<option value={p.id}>{p.name}</option>
