@@ -69,7 +69,11 @@ async def login(key: str | None = None):
 async def get_current_state(game_id: int):
     with Session(engine) as session:
         game = session.exec(select(Game).where(Game.id == game_id)).first()
-        return game.state
+        if not game:
+            return Response(status_code=HTTPStatus.BAD_REQUEST)
+        
+        return {"game_id": game.id, "state": game.state, "current_voting_event":game.current_voting_event, "current_voting_event": game.current_voting_event}
+        #return game.state
     
     
 
@@ -79,8 +83,17 @@ async def get_current_state(game_id: int):
     tags=["voting"],
 )
 async def post_vote(user_id: str, vote_id: str, vote: str, extra: dict[str, str] | None = None):
-    return Response(status_code=HTTPStatus.NO_CONTENT)
+    with Session(engine) as session:
+        voter = session.exec(select(Voter).where(Voter.id == user_id)).first()
+        voting_event = session.exec(select(VotingEvent).where(VotingEvent.id == vote_id)).first()
 
+        if not voter or not voting_event:
+            return Response(status_code=HTTPStatus.BAD_REQUEST)
+        
+        vote = Vote(voter_id=voter.id, voting_event_id=voting_event.id, vote=vote,)
+        session.add(vote)
+        session.commit()
+        return {"message":"Vote cast successfully"}
 @common_router.get(
     "/join",
     response_model = Game
@@ -114,6 +127,50 @@ async def register(voter: Voter) -> Game:
         session.commit()
         return game
 
+@common_router.post(
+    "/start_game",
+    tags=["game"],
+)
+
+async def start_game(game_id:int):
+    with Session(engine) as session:
+        game = session.exec(select(Game).where(Game.id == game_id)).first()
+        if not game:
+            return Response(status_code=HTTPStatus.BAD_REQUEST)
+        game.state = "active"
+        session.add(game)
+        session.commit()
+        return {"message":"Game started"}
+    
+@common_router.post(
+    "/end_game",
+    tags=["game"],
+)
+async def end_game(game_id:int):
+    with Session(engine) as session:
+        game = session.exec(select(Game).where(Game.id == game_id)).first()
+        if not game:
+            return Response(status_code=HTTPStatus.BAD_REQUEST)
+        
+        game.state = "ended"
+        session.add(game)
+        session.commit()
+        return {"message":"Game ended"}
+
+@common_router.post(
+    "/next_issue/{game_id}",
+    tags=["voting"],
+)
+
+async def next_issue(game_id: int):
+    with Session(engine) as session:
+        game = session.exec(select(Game).where(Game.id == game_id)).first()
+        if not game:
+            return Response(status_code=HTTPStatus.BAD_REQUEST)
+        game.current_voting_event += 1
+        session.add(game)
+        session.commit()
+        return {"message":"Moved to next issue"}
 # Uncomment to create test game on startup
 #test_game = Game(name="Test Game", state="test", hash="1234", rounds=[], parties=[Party(name="red"), Party(name="blue")], voters=[])
 #with Session(engine) as session:
