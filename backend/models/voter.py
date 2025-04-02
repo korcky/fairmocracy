@@ -9,8 +9,7 @@ from sqlmodel import SQLModel, Field, Relationship
 class Voter(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field()
-    party_id: int = Field(foreign_key="party.id")
-    party: "Party" = Relationship(back_populates="voters")
     game_id: int = Field(foreign_key="game.id")
     game: "Game" = Relationship(back_populates="voters")
     votes: list["Vote"] = Relationship(back_populates="voter")
+    affiliations: list["Affiliation"] = Relationship(back_populates="voter")
