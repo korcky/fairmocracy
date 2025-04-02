@@ -1,38 +1,62 @@
 <script>
 	import { z } from 'zod';
-	import { setUserData } from '$lib/stores/userData.svelte.js';
-
+	import { setUserData, currentUser } from '$lib/stores/userData.svelte.js';
+    import { PUBLIC_BACKEND_URL } from "$env/static/public";
+	
 	let { onRegistration } = $props();
-
 	let name = $state('');
 	let party = $state('');
 	let errors = $state({});
-	let success = $state(false);
-
-	const formValidator = z.object({
+	let {game} = $currentUser;
+	let partyOptions = $state([]);
+	
+	$inspect(game)
+	$inspect(partyOptions)
+	$inspect(party)
+	$effect(() => {
+		if (game) {
+			fetch(`${PUBLIC_BACKEND_URL}/parties/game/${game.id}`).then((res) => {
+				if (res.ok) {
+					res.json().then(respJson => partyOptions = respJson);
+				} else {
+					errors = { api: ['Failed to fetch parties'] };
+				}
+			});
+		}
+	})
+	
+	let formValidator = z.object({
 		name: z.string().nonempty('Name is required'),
-		party: z.enum(['red', 'blue'])
+		party: z.string()
 	});
 
-	// Register function that uses zod for validating the inputs. Does not
-	// store persistent data yet, need to implement cookies or something
-	function register() {
+	const register = () => {
 		errors = {};
 		try {
 			const validatedData = formValidator.parse({ name, party });
 			const { name: validName, party: validParty } = validatedData;
-			setUserData(validName, validParty);
-			success = true;
+			fetch(`${PUBLIC_BACKEND_URL}/register`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ name: validName, party_id: parseInt(party), game_id: game.id })
+			}).then((res) => {
+				if (res.ok) {
+					setUserData({ name: validName, party: validParty, game });
+					onRegistration();
+				} else {
+					errors = { name: ['Registration failed'] };
+				}
+			})
 		} catch (err) {
+			console.log(err)
 			if (err instanceof z.ZodError) {
 				errors = err.flatten().fieldErrors;
 			}
 		}
 		// If the submitted data was fine by our validation standards, signal AppCore
 		// to move into waiting room view
-		if (success) {
-			onRegistration();
-		}
 	}
 </script>
 
@@ -57,16 +81,21 @@
 			<label for="party">Party</label>
 			<select
 				id="party"
-				value={party}
-				oninput={(e) => (party = e.target.value)}
+				name="party"
+				onchange={(e) => (party = e.target.value)}
 				class="select variant-form-material"
-			>
-				<option value=""></option>
-				<option value="red">Red</option>
-				<option value="blue">Blue</option>
+			>	
+			{#if game}
+				{#each partyOptions as p}
+					<option value={p.id}>{p.name}</option>
+				{/each}
+				{/if}
 			</select>
 			{#if errors.party}
 				<p class="mt-1 text-sm text-red-500">Select your party</p>
+			{/if}
+			{#if errors.api}
+				<p class="mt-1 text-sm text-red-500">Error while fetching party information</p>
 			{/if}
 		</div>
 	</div>
