@@ -25,6 +25,7 @@ export const setUserData = ({name, game, userId, affiliations, rounds}) => {
     userId: userId || null,
     affiliations: affiliations || [],
     rounds: rounds || []
+
   });
 };
 

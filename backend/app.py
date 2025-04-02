@@ -22,6 +22,7 @@ engine = create_engine(sqlite_url,  connect_args=connect_args)
 
 FRONTEND_URL = "http://localhost:5173"
 
+
 @app.on_event("startup")
 def on_startup():
     SQLModel.metadata.create_all(engine)
@@ -140,6 +141,7 @@ async def register_to_vote(affiliation: Affiliation) -> Affiliation:
         session.commit()
         session.refresh(affiliation)
         return affiliation
+
 
 app.include_router(common_router)
 app.include_router(user_router, prefix="/v1/user")

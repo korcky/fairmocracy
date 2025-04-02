@@ -10,6 +10,7 @@
 	
 	// First landing on the page renders the regisster view
 	const { game, name, affiliations, userId } = $currentUser;
+
 	let currentScreen = $state('select');
 	const handleSelect = () => {
 		currentScreen = 'register';
@@ -30,6 +31,7 @@
 
 	if (game && game.state.active) {
 		currentScreen = 'vote'
+
 	}
 
 	// After succesfully registered, go to wait room

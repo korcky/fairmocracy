@@ -9,3 +9,4 @@ class Round(SQLModel, table=True):
     voting_events: list["VotingEvent"] = Relationship(back_populates="round")
     parties: list["Party"] = Relationship(back_populates="round")
     affiliations: list["Affiliation"] = Relationship(back_populates="round")
+

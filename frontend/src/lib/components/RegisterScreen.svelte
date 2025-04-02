@@ -8,7 +8,7 @@
 	let errors = $state({});
 	let {game} = $currentUser;
 	let partyOptions = $state([]);
-	
+
 	$effect(() => {
 		if (game) {
 			fetch(`${PUBLIC_BACKEND_URL}/parties/game/${game.id}`).then((res) => {
@@ -30,6 +30,7 @@
 		try {
 			const validatedData = formValidator.parse({ name });
 			const { name: validName } = validatedData;
+
 			fetch(`${PUBLIC_BACKEND_URL}/register`, {
 				method: 'POST',
 				headers: {

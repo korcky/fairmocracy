@@ -10,6 +10,7 @@ class Game(SQLModel, table=True):
     voters: list["Voter"] = Relationship(back_populates="game")
     rounds: list["Round"] = Relationship(back_populates="game")    
     state: str = Field(default="{\"current_round\": 0}")
+
     # TODO add game state
 
  
