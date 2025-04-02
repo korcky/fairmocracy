@@ -19,7 +19,7 @@ sqlite_url = f"sqlite:///{sqlite_file_name}"
 connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
 
-FRONTEND_URL = "http://localhost:3000"
+FRONTEND_URL = "http://localhost:5173"
 
 @app.on_event("startup")
 def on_startup():
