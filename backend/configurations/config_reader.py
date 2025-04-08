@@ -11,6 +11,9 @@ class VotingConfigReader:
         """Group rows into rounds based on identical Rules, Parties, and Fractions."""
         df = pd.read_csv(self.file_path, delimiter=';')
 
+        if 'Fractions' not in df.columns:
+            df['Fractions'] = ''
+
         # Create a unique round identifier to preserve order
         df['RoundKey'] = df[['Rules', 'Parties', 'Fractions']].agg('||'.join, axis=1)
         df['RoundID'] = pd.factorize(df['RoundKey'])[0]
@@ -19,11 +22,15 @@ class VotingConfigReader:
         for _, group in df.groupby('RoundID', sort=False):
             rule = group['Rules'].iloc[0]
             parties = [p.strip() for p in group['Parties'].iloc[0].split(',')]
-            fractions = [float(f.strip()) for f in group['Fractions'].iloc[0].split(',')]
 
-            # Calculate last fraction to make sum to 1.0
-            last_fraction = round(1.0 - sum(fractions), 10)
-            fractions.append(last_fraction)
+            raw_fractions = group['Fractions'].iloc[0]
+            if pd.isna(raw_fractions) or raw_fractions.strip() == '':
+                fractions = []
+            else:
+                fractions = [float(f.strip()) for f in raw_fractions.split(',') if f.strip() != '']
+                # Calculate last fraction to make sum to 1.0
+                last_fraction = round(1.0 - sum(fractions), 10)  # round to avoid floating point issues
+                fractions.append(last_fraction)
 
             questions = group['Questions'].tolist()
 
