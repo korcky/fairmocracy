@@ -4,12 +4,20 @@ from typing import Annotated
 
 from fastapi import APIRouter, FastAPI, Cookie
 from fastapi.responses import Response, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlmodel import SQLModel, Session, select
 
 from models import Game, VotingEvent, Party, Voter, Vote, Affiliation, Round
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*']
+)
+
+
 user_router = APIRouter()
 game_router = APIRouter()
 common_router = APIRouter()
@@ -25,6 +33,8 @@ FRONTEND_URL = "http://localhost:5173"
 
 @app.on_event("startup")
 def on_startup():
+    import os
+    print(os.environ.get("huhu"))
     SQLModel.metadata.create_all(engine)
     # Uncomment to create test game on startup
     test_game = Game(name="Test Game", hash="1234", rounds=[Round(round_number=0, parties=[Party(name="red"), Party(name="blue")],rules="FI")])
