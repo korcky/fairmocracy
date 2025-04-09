@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime
 from ..models import Game, VotingEvent, Party, Round
 
 
@@ -6,6 +7,7 @@ class VotingConfigReader:
     def __init__(self, file_path: str):
         self.file_path = file_path
         self.rounds = self._load_rounds()
+        self.name = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def _load_rounds(self):
         """Group rows into rounds based on identical Rules, Parties, and Fractions."""
@@ -63,8 +65,8 @@ class VotingConfigReader:
                 parties.append(Party(name=party))
 
             rounds.append(Round(rules=self.get_rule(rnd), parties=parties, voting_events=voting_events))
-
-        return Game(name='GAME_NAME', rounds=rounds)
+        
+        return Game(name=self.name, rounds=rounds)
 
     def get_round(self, round_number: int):
         self._validate_round_number(round_number)
@@ -88,4 +90,7 @@ class VotingConfigReader:
     def get_questions(self, round_number: int):
         self._validate_round_number(round_number)
         return self.rounds[round_number]['Questions']
+    
+    def get_name(self):
+        return self.name
     
