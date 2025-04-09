@@ -38,8 +38,6 @@
 	const register = () => {
 		errors = {};
 		try {
-			console.log(gameState.current_round)
-			console.log(gameState)
 			const validatedData = formValidator.parse({  party });
 			const { party: validParty } = validatedData;
 			fetch(`${PUBLIC_BACKEND_URL}/register_to_vote`, {
@@ -60,13 +58,11 @@
 				}
 			})
 		} catch (err) {
-			console.log(err)
+			console.error(err)
 			if (err instanceof z.ZodError) {
 				errors = err.flatten().fieldErrors;
 			}
 		}
-		// If the submitted data was fine by our validation standards, signal AppCore
-		// to move into waiting room view
 	}
 </script>
 

@@ -39,9 +39,7 @@
 				body: JSON.stringify({ name: validName, game_id: game.id })
 			}).then((res) => {
 				if (res.ok) {
-
 					res.json().then(respJson => {
-						console.log(respJson)
 						setUserData({game, name: respJson.name, userId: respJson.id });
 						onRegistration();
 					});
@@ -51,7 +49,7 @@
 				}
 			})
 		} catch (err) {
-			console.log(err)
+			console.error(err)
 			if (err instanceof z.ZodError) {
 				errors = err.flatten().fieldErrors;
 			}
