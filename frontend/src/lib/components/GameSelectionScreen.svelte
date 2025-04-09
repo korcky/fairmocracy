@@ -67,7 +67,6 @@ const onsubmit = (e) => {
 		flex: 1;
 	}
 
-
 	.btn {
 		color: white;
 		transition-property: all;

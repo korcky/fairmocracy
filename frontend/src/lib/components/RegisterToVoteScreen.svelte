@@ -4,10 +4,11 @@
     import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	
 	let { onRegistration } = $props();
-	let name = $state('');
+	let party = $state('');
 	let errors = $state({});
-	let {game} = $currentUser;
+	let {game, name, userId, affiliations, rounds } = $currentUser;
 	let partyOptions = $state([]);
+	let gameState = JSON.parse(game.state);
 
 	$effect(() => {
 		if (game) {
@@ -18,32 +19,40 @@
 					errors = { api: ['Failed to fetch parties'] };
 				}
 			});
+			if (!rounds || rounds.length == 0) {
+				fetch(`${PUBLIC_BACKEND_URL}/rounds/${game.id}`).then((res) => {
+					if (res.ok) {
+						res.json().then(respJson => setUserData({ game, name, userId, affiliations, rounds: respJson }));
+					} else {
+						errors = { api: ['Failed to fetch rounds'] };
+					}
+				});
+			}
 		}
 	})
 	
 	let formValidator = z.object({
-		name: z.string().nonempty('Name is required'),
+		party: z.string().nonempty('Select your party')
 	});
 
 	const register = () => {
 		errors = {};
 		try {
-			const validatedData = formValidator.parse({ name });
-			const { name: validName } = validatedData;
-
-			fetch(`${PUBLIC_BACKEND_URL}/register`, {
+			const validatedData = formValidator.parse({  party });
+			const { party: validParty } = validatedData;
+			fetch(`${PUBLIC_BACKEND_URL}/register_to_vote`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ name: validName, game_id: game.id })
+				body: JSON.stringify({ 
+					party_id: parseInt(party),
+					round_id: rounds[gameState.current_round].id,
+					voter_id: userId })
 			}).then((res) => {
 				if (res.ok) {
-					res.json().then(respJson => {
-						setUserData({game, name: respJson.name, userId: respJson.id });
-						onRegistration();
-					});
-				
+					setUserData({name,game,userId,affiliations: { ...affiliations, [gameState.current_round]: { party: validParty } }});
+					onRegistration();
 				} else {
 					errors = { name: ['Registration failed'] };
 				}
@@ -54,26 +63,33 @@
 				errors = err.flatten().fieldErrors;
 			}
 		}
-		// If the submitted data was fine by our validation standards, signal AppCore
-		// to move into waiting room view
 	}
 </script>
 
-<p class="p-4 text-center text-lg">Please enter your name to join the game.</p>
+<p class="p-4 text-center text-lg">Round {gameState.current_round}: select the party you represent.</p>
 
 <div class="form-container">
 	<div class="fields">
 		<div class="field">
-			<label for="name">Name</label>
-			<input
-				id="name"
-				value={name}
-				oninput={(e) => (name = e.target.value)}
-				class="input variant-form-material"
-				placeholder="Enter your name"
-			/>
-			{#if errors.name}
-				<p class="mt-1 text-sm text-red-500">{errors.name[0]}</p>
+			<label for="party">Party</label>
+			<select
+				id="party"
+				name="party"
+				onchange={(e) => (party = e.target.value)}
+				class="select variant-form-material"
+			>
+			<option value="" disabled selected>Select your party</option>
+			{#if game}
+				{#each partyOptions as p}
+					<option value={p.id}>{p.name}</option>
+				{/each}
+				{/if}
+			</select>
+			{#if errors.party}
+				<p class="mt-1 text-sm text-red-500">Select your party</p>
+			{/if}
+			{#if errors.api}
+				<p class="mt-1 text-sm text-red-500">{errors.api}</p>
 			{/if}
 		</div>
 	</div>
