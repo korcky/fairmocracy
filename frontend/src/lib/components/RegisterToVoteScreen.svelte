@@ -6,9 +6,11 @@
 	let { onRegistration } = $props();
 	let party = $state('');
 	let errors = $state({});
-	let {game, name, userId, affiliations, rounds } = $currentUser;
+	let {game, name, userId, affiliations } = $currentUser;
+	let rounds = $derived($currentUser.rounds);
 	let partyOptions = $state([]);
 	let gameState = JSON.parse(game.state);
+	// console.log(gameState)
 
 	$effect(() => {
 		if (game) {
