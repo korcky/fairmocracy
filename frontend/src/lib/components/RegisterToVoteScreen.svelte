@@ -2,16 +2,18 @@
 	import { z } from 'zod';
 	import { setUserData, currentUser } from '$lib/stores/userData.svelte.js';
 	// import { PUBLIC_BACKEND_URL } from "$env/static/public";
-	
+
 	// Temporary workaround for Render, can revert back later
+	import { promises as fs } from 'fs';
+
 	async function getBackendUrl() {
 		try {
 			const localSecret = await import('$env/static/public');
 			return localSecret.PUBLIC_BACKEND_URL;
 		} catch (error) {
-			console.error('Error importing from .env, falling back to Render secret', error);
-			const renderSecret = await import('/etc/secrets/PUBLIC_BACKEND_URL');
-			return renderSecret.PUBLIC_BACKEND_URL;
+			console.error('Error reading .env, using Render secret.', error);
+			const renderSecret = await fs.readFile('/etc/secrets/PUBLIC_BACKEND_URL', 'utf8');
+			return renderSecret.trim();
 		}
 	}
 
