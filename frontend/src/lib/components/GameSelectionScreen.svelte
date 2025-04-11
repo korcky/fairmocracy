@@ -1,27 +1,50 @@
 <script>
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-	import { setUserData } from "$lib/stores/userData.svelte.js";
+	// import { PUBLIC_BACKEND_URL } from "$env/static/public";
 
-let backendUrl = PUBLIC_BACKEND_URL;
-let gameCode = $state('');
-let error = $state('');
-const { onSelect } = $props();
+	// Temporary workaround for Render, can revert back later
+	import { promises as fs } from 'fs';
 
-const onsubmit = (e) => {
-    e.preventDefault();
-    fetch(`${PUBLIC_BACKEND_URL}/join/?game_hash=${gameCode}`).then((res) => {
-        if (res.ok) {
-            res.json().then(respJson => {setUserData({game: respJson})
-            onSelect();
-        })
-        } else {
-            error = "Game code submission failed: "+res.statusText;
-        }
-    }).catch((err) => {
-        console.log(err)
-        error = "Network error";
-    });
-}
+	async function getBackendUrl() {
+		try {
+			const localSecret = await import('$env/static/public');
+			return localSecret.PUBLIC_BACKEND_URL;
+		} catch (error) {
+			console.error('Error reading .env, using Render secret.', error);
+			const renderSecret = await fs.readFile('/etc/secrets/PUBLIC_BACKEND_URL', 'utf8');
+			return renderSecret.trim();
+		}
+	}
+
+	(async () => {
+		const PUBLIC_BACKEND_URL = await getBackendUrl();
+		console.log('Backend URL:', PUBLIC_BACKEND_URL);
+	})();
+	
+	import { setUserData } from '$lib/stores/userData.svelte.js';
+
+	let backendUrl = PUBLIC_BACKEND_URL;
+	let gameCode = $state('');
+	let error = $state('');
+	const { onSelect } = $props();
+
+	const onsubmit = (e) => {
+		e.preventDefault();
+		fetch(`${PUBLIC_BACKEND_URL}/join/?game_hash=${gameCode}`)
+			.then((res) => {
+				if (res.ok) {
+					res.json().then((respJson) => {
+						setUserData({ game: respJson });
+						onSelect();
+					});
+				} else {
+					error = 'Game code submission failed: ' + res.statusText;
+				}
+			})
+			.catch((err) => {
+				console.log(err);
+				error = 'Network error';
+			});
+	};
 </script>
 
 <p class="p-4 text-center text-lg">Enter game code:</p>
@@ -37,11 +60,11 @@ const onsubmit = (e) => {
 				placeholder="Game code"
 			/>
 		</div>
-        {#if error}
-            <p class="mt-1 text-sm text-red-500">{error}</p>
-        {/if}
+		{#if error}
+			<p class="mt-1 text-sm text-red-500">{error}</p>
+		{/if}
 	</div>
-	<button onclick={ onsubmit } type="submit" class="variant-filled btn bg-blue-500">Enter</button>
+	<button onclick={onsubmit} type="submit" class="variant-filled btn bg-blue-500">Enter</button>
 </div>
 
 <style>

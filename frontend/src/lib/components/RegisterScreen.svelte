@@ -1,28 +1,47 @@
 <script>
 	import { z } from 'zod';
 	import { setUserData, currentUser } from '$lib/stores/userData.svelte.js';
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-	
+	// import { PUBLIC_BACKEND_URL } from "$env/static/public";
+
+	// Temporary workaround for Render, can revert back later
+	import { promises as fs } from 'fs';
+
+	async function getBackendUrl() {
+		try {
+			const localSecret = await import('$env/static/public');
+			return localSecret.PUBLIC_BACKEND_URL;
+		} catch (error) {
+			console.error('Error reading .env, using Render secret.', error);
+			const renderSecret = await fs.readFile('/etc/secrets/PUBLIC_BACKEND_URL', 'utf8');
+			return renderSecret.trim();
+		}
+	}
+
+	(async () => {
+		const PUBLIC_BACKEND_URL = await getBackendUrl();
+		console.log('Backend URL:', PUBLIC_BACKEND_URL);
+	})();
+
 	let { onRegistration } = $props();
 	let name = $state('');
 	let errors = $state({});
-	let {game} = $currentUser;
+	let { game } = $currentUser;
 	let partyOptions = $state([]);
 
 	$effect(() => {
 		if (game) {
 			fetch(`${PUBLIC_BACKEND_URL}/parties/game/${game.id}`).then((res) => {
 				if (res.ok) {
-					res.json().then(respJson => partyOptions = respJson);
+					res.json().then((respJson) => (partyOptions = respJson));
 				} else {
 					errors = { api: ['Failed to fetch parties'] };
 				}
 			});
 		}
-	})
-	
+	});
+
 	let formValidator = z.object({
-		name: z.string().nonempty('Name is required'),
+		name: z.string().nonempty('Name is required')
 	});
 
 	const register = () => {
@@ -39,24 +58,23 @@
 				body: JSON.stringify({ name: validName, game_id: game.id })
 			}).then((res) => {
 				if (res.ok) {
-					res.json().then(respJson => {
-						setUserData({game, name: respJson.name, userId: respJson.id });
+					res.json().then((respJson) => {
+						setUserData({ game, name: respJson.name, userId: respJson.id });
 						onRegistration();
 					});
-				
 				} else {
 					errors = { name: ['Registration failed'] };
 				}
-			})
+			});
 		} catch (err) {
-			console.error(err)
+			console.error(err);
 			if (err instanceof z.ZodError) {
 				errors = err.flatten().fieldErrors;
 			}
 		}
 		// If the submitted data was fine by our validation standards, signal AppCore
 		// to move into waiting room view
-	}
+	};
 </script>
 
 <p class="p-4 text-center text-lg">Please enter your name to join the game.</p>
