@@ -1,5 +1,6 @@
 from http import HTTPStatus
 from typing import Annotated
+from round import Round
 
 from fastapi import APIRouter, FastAPI, Cookie
 from fastapi.responses import Response, JSONResponse
@@ -72,8 +73,7 @@ async def get_current_state(game_id: int):
         if not game:
             return Response(status_code=HTTPStatus.BAD_REQUEST)
         
-        return {"game_id": game.id, "state": game.state, "current_voting_event":game.current_voting_event, "current_voting_event": game.current_voting_event}
-        #return game.state
+        return {"current_round": game.current_round, "current_voting_event": game.current_voting_event, "status": game.status}
     
     
 
@@ -132,6 +132,22 @@ async def register(voter: Voter) -> Game:
     tags=["game"],
 )
 
+@game_router.get(
+    "/game_status/{game_id}",
+    tags=["game"],
+)
+async def get_game_status(game_id: int):
+    with Session(engine) as session:
+        game = session.exec(select(Game).where(Game.id == game_id)).first()
+        if not game:
+            return Response(status_code=HTTPStatus.BAD_REQUEST)
+        
+        return {"game_id": game.id, "status": game.status, "current_round":game.current_round, "current_voting_event": game.current_voting_event}
+    
+    
+
+
+
 async def start_game(game_id:int):
     with Session(engine) as session:
         game = session.exec(select(Game).where(Game.id == game_id)).first()
@@ -181,3 +197,66 @@ async def next_issue(game_id: int):
 app.include_router(common_router)
 app.include_router(user_router, prefix="/v1/user")
 app.include_router(game_router, prefix="/v1/voting")
+
+
+@game_router.post(
+    "/progress_game/{game_id}",
+    tags=["game"],
+)
+
+async def progress_game(game_id: int):
+    with Session(engine) as session:
+        game = session.exec(select(Game).where(Game.id == game_id)).first()
+        if not game:
+            return Response(status_code=HTTPStatus.BAD_REQUEST)
+        
+        #Get current voting event
+        voting_event = session.exec(select(VotingEvent).where(VotingEvent.id == game.current_voting_event)).first()
+        if not voting_event:
+            return Response(status_code=HTTPStatus.BAD_REQUEST)
+        
+        #Count votes
+        votes = session.exec(select(Vote).where(Vote.voting_event_id == voting_event.id)).all()
+        yes_votes = sum(1 for vote in votes if vote.vote_value == "yes")
+        no_votes = sum(1 for vote in votes if vote.vote_value == "no")
+        empty_votes = sum(1 for vote in votes if vote.vote_value == "empty")
+
+        #Determine result
+        if yes_votes > no_votes:
+            result = "PASSED"
+        elif no_votes > yes_votes:
+            result = "FAILED"
+        else:
+            result = "empty"
+
+        #Log the result (for database purposes)
+        print(f"Voting Event {voting_event.id} Result: {result} (Yes: {yes_votes}, No: {no_votes})")
+        
+        #Progress to next voting event
+        next_voting_event = session.exec(
+            select(VotingEvent).where(VotingEvent.round_id == voting_event.round_id, VotingEvent.id > voting_event.id)).first()
+        
+        if next_voting_event:
+            game.current_voting_event = next_voting_event.id
+        else:
+            game.current_round += 1
+            next_round = session.exec(select(Round).where(Round.game_id == game.id, Round.round_number == game.current_round)).first()
+            if next_round:
+                game.current_voting_event = next_round.voting_events[0].id
+            else:
+                game.status = "ENDED"
+
+        #Save changes
+        session.add(game)
+        session.commit()
+
+        return {
+            "message": "Game progressed",
+            "current_round": game.current_round,
+            "current_voting_event": game.current_voting_event,
+            "status": game.status,
+            "last_voting_result": result,
+            "yes_votes": yes_votes,
+            "no_votes": no_votes,
+        }
+

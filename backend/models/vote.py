@@ -1,6 +1,11 @@
 from datetime import datetime, UTC
+from enum import Enum
 
 from sqlmodel import SQLModel, Field, Relationship
+class VoteValue(str, Enum):
+    YES = "yes"
+    NO = "no"
+    ABSTAIN = "abstain"
 
 
 class Vote(SQLModel, table=True):
@@ -9,5 +14,7 @@ class Vote(SQLModel, table=True):
     voter: "Voter" = Relationship(back_populates="votes")
     voting_event_id: int = Field(foreign_key="voting_event.id")
     voting_event: "VotingEvent" = Relationship(back_populates="votes")
-    vote_value: bool = Field()
+    vote_value: VoteValue = Field()
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
