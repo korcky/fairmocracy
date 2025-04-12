@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-from api_models import Voter, VotingEvent, Vote, Party, Game
+from api.models import Voter, VotingEvent, Vote, Party, Game
 
 
 class AbstractEngine(metaclass=ABCMeta):

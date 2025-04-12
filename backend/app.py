@@ -38,9 +38,9 @@ def on_startup():
     # Uncomment to create test game on startup
     test_game = sql_models.Game(
         name="Test Game", hash="1234", rounds=[
-            sql_models.Round(round_number=0, parties=[sql_models.Party(name="red"), sql_models,Party(name="blue")], rules="FI")],
+            sql_models.Round(round_number=0, parties=[sql_models.Party(name="red"), sql_models.Party(name="blue")], rules="FI")],
     )
-    with Session(DB_ENGINE) as session:
+    with Session(DB_ENGINE.engine) as session:
         session.add(test_game)
         session.commit()
 
@@ -84,21 +84,21 @@ app.include_router(game_router, prefix="/v1/voting")
 # TODO refactor stuff below
 @common_router.get("/games/")
 async def read_games() -> list[sql_models.Game]:
-    with Session(DB_ENGINE) as session:
+    with Session(DB_ENGINE.engine) as session:
         games = session.exec(select(sql_models.Game)).all()
         return games
 
 
 @common_router.get("/games/{game_id}")
 async def read_game(game_id: int) -> sql_models.Game:
-    with Session(DB_ENGINE) as session:
+    with Session(DB_ENGINE.engine) as session:
         game = session.exec(select(sql_models.Game).where(sql_models.Game.id == game_id)).first()
         return game or Response(status_code=HTTPStatus.BAD_REQUEST)
 
 
 @common_router.get("/parties/game/{game_id}")
 async def read_parties_by_game(game_id: int) -> list[sql_models.Party]:
-    with Session(DB_ENGINE) as session:
+    with Session(DB_ENGINE.engine) as session:
         game = session.exec(select(sql_models.Game).where(sql_models.Game.id == game_id)).first()
         if not game:
             return Response(status_code=HTTPStatus.BAD_REQUEST)
@@ -116,7 +116,7 @@ async def read_parties_by_game(game_id: int) -> list[sql_models.Party]:
     response_model=list[sql_models.Round],
 )
 async def get_rounds_by_game(game_id: int) -> list[sql_models.Round]:
-    with Session(DB_ENGINE) as session:
+    with Session(DB_ENGINE.engine) as session:
         rounds = session.exec(select(sql_models.Round).where(sql_models.Round.game_id == game_id)).all()
         return rounds
 
@@ -126,7 +126,7 @@ async def get_rounds_by_game(game_id: int) -> list[sql_models.Round]:
     response_model=sql_models.Game,
 )
 async def get_game_by_hash(game_hash: str) -> sql_models.Game:
-    with Session(DB_ENGINE) as session:
+    with Session(DB_ENGINE.engine) as session:
         game = session.exec(select(sql_models.Game).where(sql_models.Game.hash == game_hash)).first()
         if not game:
             return Response(status_code=HTTPStatus.NOT_FOUND)
@@ -138,7 +138,7 @@ async def get_game_by_hash(game_hash: str) -> sql_models.Game:
     response_model=sql_models.Voter,
 )
 async def register_user(user: sql_models.Voter) -> sql_models.Voter:
-    with Session(DB_ENGINE) as session:
+    with Session(DB_ENGINE.engine) as session:
         session.add(user)
         session.commit()
         session.refresh(user)
@@ -151,7 +151,7 @@ async def register_user(user: sql_models.Voter) -> sql_models.Voter:
     response_model=sql_models.Affiliation
 )
 async def register_to_vote(affiliation: sql_models.Affiliation) -> sql_models.Affiliation:
-    with Session(DB_ENGINE) as session:
+    with Session(DB_ENGINE.engine) as session:
         round = session.exec(select(sql_models.Game).where(sql_models.Round.id == affiliation.round_id)).first() 
         if not round:
             print("no round")

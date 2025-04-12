@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime, UTC
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,7 +18,7 @@ class Game(BaseModel):
     - rounds: The rounds of the game.
     - state: The state of the game: a JSON object stored as a string (perhaps a better solution exists). 
     """
-    id: int
+    id: int | None = None
     hash: str
     name: str
     state: str
@@ -44,7 +46,7 @@ class Voter(BaseModel):
     - affiliations: The affiliations of the voter with parties in the game.
     """
 
-    id: int
+    id: int | None = None
     name: str
 
     game_id: int
@@ -61,7 +63,7 @@ class Voter(BaseModel):
 
  
 class Round(BaseModel):
-    id: int
+    id: int | None = None
     round_number: int
 
     game_id: int
@@ -90,7 +92,7 @@ class Party(BaseModel):
     - round: The round the party belongs to.    
     - affiliations: The affiliations of the party with voters in the game.
     """
-    id: int
+    id: int | None = None
     name: str
 
     round_id: int
@@ -116,7 +118,7 @@ class Affiliation(BaseModel):
     - round_id: The ID of the round.
     -
     """
-    id: int
+    id: int | None = None
 
     voter_id: int
     party_id: int
@@ -141,7 +143,7 @@ class VotingEvent(BaseModel):
     - votes: The votes cast in the voting event. 
     """
 
-    id: int
+    id: int | None = None
     title: str
     content: str
     voting_system: str
