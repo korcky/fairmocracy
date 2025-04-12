@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-from api.models import Voter, VotingEvent, Vote, Party, Game
+from api.models import Affiliation, Voter, VotingEvent, Vote, Party, Game, Round
 
 
 class AbstractEngine(metaclass=ABCMeta):
@@ -15,13 +15,33 @@ class AbstractEngine(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def add_voter(self, voter: Voter) -> Voter:
+        pass
+
+    @abstractmethod
     def get_party(self, party_id: int) -> Party:
         """Return Party based on its ID"""
         pass
 
     @abstractmethod
+    def get_parties(self, game_id: int) -> list[Party]:
+        pass
+
+    @abstractmethod
+    def add_affiliation(self, affiliation: Affiliation) -> Affiliation:
+        pass
+
+    @abstractmethod
     def get_game(self, game_id: int) -> Game:
         """Return Game based on its ID"""
+        pass
+
+    @abstractmethod
+    def get_game_by_hash(self, game_hash: str) -> Game:
+        pass
+
+    @abstractmethod
+    def get_rounds(self, game_id: int) -> list[Round]:
         pass
 
     @abstractmethod

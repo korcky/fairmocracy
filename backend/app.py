@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlmodel import SQLModel, Session, select
 
-from api.models import Voter, Vote, VotingEvent, Party, Game
+from api.models import Voter, Vote, VotingEvent, Party, Game, Round, Affiliation
 from database import AbstractEngine, SQLEnging
 from database.sql import models as sql_models  # TODO remove
 
@@ -36,13 +36,20 @@ def get_db_engine() -> AbstractEngine:
 def on_startup():
     get_db_engine().startup_initialization()
     # Uncomment to create test game on startup
-    test_game = sql_models.Game(
-        name="Test Game", hash="1234", rounds=[
-            sql_models.Round(round_number=0, parties=[sql_models.Party(name="red"), sql_models.Party(name="blue")], rules="FI")],
-    )
-    with Session(DB_ENGINE.engine) as session:
-        session.add(test_game)
-        session.commit()
+    try:
+        game = get_db_engine().get_game(game_id=1)
+    except Exception as e:
+        test_game = sql_models.Game(
+            name="Test Game", hash="1234", rounds=[
+                sql_models.Round(round_number=0, parties=[sql_models.Party(name="red"), sql_models.Party(name="blue")], rules="FI")],
+        )
+        with Session(DB_ENGINE.engine) as session:
+            session.add(test_game)
+            session.commit()
+            session.refresh(test_game)
+            test_game.current_round_id = test_game.rounds[0].id
+            session.add(test_game)
+            session.commit()
 
 
 @user_router.get(
@@ -82,92 +89,47 @@ app.include_router(game_router, prefix="/v1/voting")
 
 
 # TODO refactor stuff below
-@common_router.get("/games/")
-async def read_games() -> list[sql_models.Game]:
-    with Session(DB_ENGINE.engine) as session:
-        games = session.exec(select(sql_models.Game)).all()
-        return games
-
-
-@common_router.get("/games/{game_id}")
-async def read_game(game_id: int) -> sql_models.Game:
-    with Session(DB_ENGINE.engine) as session:
-        game = session.exec(select(sql_models.Game).where(sql_models.Game.id == game_id)).first()
-        return game or Response(status_code=HTTPStatus.BAD_REQUEST)
-
-
-@common_router.get("/parties/game/{game_id}")
-async def read_parties_by_game(game_id: int) -> list[sql_models.Party]:
-    with Session(DB_ENGINE.engine) as session:
-        game = session.exec(select(sql_models.Game).where(sql_models.Game.id == game_id)).first()
-        if not game:
-            return Response(status_code=HTTPStatus.BAD_REQUEST)
-        game_state = json.loads(game.state)
-        current_round_number = game_state["current_round"]
-        rounds = session.exec(select(sql_models.Round).where(sql_models.Round.game_id == game_id)).all()
-        current_round = next((round for round in rounds if round.round_number == current_round_number), None)
-        if not current_round:
-            return Response(status_code=HTTPStatus.BAD_REQUEST)
-        return current_round.parties
+@common_router.get(
+    "/game/{game_id}/parties",
+    response_model=list[Party],
+)
+async def read_parties_by_game(game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)) -> list[Party]:
+    return db_engine.get_parties(game_id=game_id)
 
 
 @common_router.get(
-    "/rounds/{game_id}",
-    response_model=list[sql_models.Round],
+    "/game/{game_id}/rounds",
+    response_model=list[Round],
 )
-async def get_rounds_by_game(game_id: int) -> list[sql_models.Round]:
-    with Session(DB_ENGINE.engine) as session:
-        rounds = session.exec(select(sql_models.Round).where(sql_models.Round.game_id == game_id)).all()
-        return rounds
+async def get_rounds_by_game(game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)) -> list[Round]:
+    return db_engine.get_rounds(game_id=game_id)
 
 
 @common_router.get(
     "/join",
-    response_model=sql_models.Game,
+    response_model=Game,
 )
-async def get_game_by_hash(game_hash: str) -> sql_models.Game:
-    with Session(DB_ENGINE.engine) as session:
-        game = session.exec(select(sql_models.Game).where(sql_models.Game.hash == game_hash)).first()
-        if not game:
-            return Response(status_code=HTTPStatus.NOT_FOUND)
-        return game
+async def get_game_by_hash(game_hash: str, db_engine: AbstractEngine = Depends(get_db_engine)) -> Game:
+    try:
+        return db_engine.get_game_by_hash(game_hash=game_hash)
+    except Exception:
+        return Response(status_code=HTTPStatus.NOT_FOUND)
 
 
 @common_router.post(
     "/register",
-    response_model=sql_models.Voter,
+    response_model=Voter,
 )
-async def register_user(user: sql_models.Voter) -> sql_models.Voter:
-    with Session(DB_ENGINE.engine) as session:
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        print(user)
-        return user
+async def register_user(user: Voter, db_engine: AbstractEngine = Depends(get_db_engine)) -> Voter:
+    return db_engine.add_voter(voter=user)
 
 
 @common_router.post(
     "/register_to_vote",
-    response_model=sql_models.Affiliation
+    response_model=Affiliation
 )
-async def register_to_vote(affiliation: sql_models.Affiliation) -> sql_models.Affiliation:
-    with Session(DB_ENGINE.engine) as session:
-        round = session.exec(select(sql_models.Game).where(sql_models.Round.id == affiliation.round_id)).first() 
-        if not round:
-            print("no round")
-            return Response(status_code=HTTPStatus.NOT_FOUND)
-        party = session.exec(select(sql_models.Party).where(sql_models.Party.id == affiliation.party_id, sql_models.Party.round_id == affiliation.round_id)).first()
-        if not party:
-            print("no party")
-            return Response(status_code=HTTPStatus.NOT_FOUND)
-        voter = session.exec(select(sql_models.Voter).where(sql_models.Voter.id == affiliation.voter_id)).first()
-        if not voter:
-            print("no voter")
-            return Response(status_code=HTTPStatus.NOT_FOUND)
-        session.add(affiliation)
-        session.commit()
-        session.refresh(affiliation)
-        return affiliation
-
+async def register_to_vote(affiliation: Affiliation, db_engine: AbstractEngine = Depends(get_db_engine)) -> Affiliation:
+    # TODO: accept juat party_id and add check for round
+    return db_engine.add_affiliation(affiliation=affiliation)
 
 app.include_router(common_router)

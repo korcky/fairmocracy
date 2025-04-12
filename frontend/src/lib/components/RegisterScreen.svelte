@@ -11,7 +11,7 @@
 
 	$effect(() => {
 		if (game) {
-			fetch(`${PUBLIC_BACKEND_URL}/parties/game/${game.id}`).then((res) => {
+			fetch(`${PUBLIC_BACKEND_URL}/game/${game.id}/parties`).then((res) => {
 				if (res.ok) {
 					res.json().then(respJson => partyOptions = respJson);
 				} else {

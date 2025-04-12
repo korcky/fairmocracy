@@ -32,6 +32,18 @@ class SQLEnging(AbstractEngine):
                     party_id=voter.party_id,
                 )
             raise Exception
+    
+    def add_voter(self, voter: api_models.Voter) -> api_models.Voter:
+        with Session(self.engine) as session:
+            sql_voter = sql_models.Voter(
+                name=voter.name,
+                game_id=voter.game_id,
+            )
+            session.add(sql_voter)
+            session.commit()
+            session.refresh(sql_voter)
+            voter.id = sql_voter.id
+            return voter
 
     def get_party(self, party_id: int) -> api_models.Party:
         with Session(self.engine) as session:
@@ -46,6 +58,37 @@ class SQLEnging(AbstractEngine):
                     name=party.name,
                 )
             raise Exception
+    
+    def get_parties(self, game_id: int) -> list[api_models.Party]:
+        with Session(self.engine) as session:
+            parties = session.exec(
+                select(sql_models.Party).join(sql_models.Round).join(sql_models.Game).where(
+                    sql_models.Game.id == game_id,
+                    sql_models.Party.round_id == sql_models.Game.current_round_id,
+                )
+            ).all()
+            if parties:
+                return [
+                    api_models.Party(
+                        id=party.id,
+                        name=party.name,
+                        round_id=party.round_id,
+                    )
+                    for party in parties
+                ]
+            raise Exception
+    
+    def add_affiliation(self, affiliation: api_models.Affiliation) -> api_models.Affiliation:
+        with Session(self.engine) as session:
+            sql_affiliation = sql_models.Affiliation(
+                voter_id=affiliation.voter_id,
+                party_id=affiliation.party_id,
+            )
+            session.add(sql_affiliation)
+            session.commit()
+            session.refresh(sql_affiliation)
+            affiliation.id = sql_affiliation.id
+            return affiliation
 
     def get_game(self, game_id: int) -> api_models.Game:
         with Session(self.engine) as session:
@@ -57,10 +100,44 @@ class SQLEnging(AbstractEngine):
             if game:
                 return api_models.Game(
                     id=game.id,
+                    hash=game.hash,
                     name=game.name,
-                    voting_event_ids=[event.id for event in game.voting_events],
-                    _voting_events=game.voting_events,
+                    current_round_id=game.current_round_id,
                 )
+            raise Exception
+    
+    def get_game_by_hash(self, game_hash: str) -> api_models.Game:
+        with Session(self.engine) as session:
+            game = session.exec(
+                select(sql_models.Game).where(
+                    sql_models.Game.hash == game_hash
+                )
+            ).first()
+            if game:
+                return api_models.Game(
+                    id=game.id,
+                    hash=game.hash,
+                    name=game.name,
+                    current_round_id=game.current_round_id,
+                )
+            raise Exception
+    
+    def get_rounds(self, game_id: int) -> list[api_models.Round]:
+        with Session(self.engine) as session:
+            rounds = session.exec(
+                select(sql_models.Round).where(
+                    sql_models.Round.game_id == game_id
+                )
+            ).all()
+            if rounds:
+                return [
+                    api_models.Round(
+                        id=_round.id,
+                        round_number=_round.round_number,
+                        game_id=_round.game_id,
+                    )
+                    for _round in rounds
+                ]
             raise Exception
 
     def get_voting_event(self, voting_event_id: int) -> api_models.VotingEvent:

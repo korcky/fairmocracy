@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from datetime import datetime, UTC
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -14,24 +12,14 @@ class Game(BaseModel):
     - id: A unique identifier for the game.
     - hash: A unique hash for the game. (not really a hash)
     - name: The name of the game.
-    - voters: The voters (players) in the game.
-    - rounds: The rounds of the game.
-    - state: The state of the game: a JSON object stored as a string (perhaps a better solution exists). 
+    - current_round_id: id for a current Round.
     """
     id: int | None = None
     hash: str
     name: str
-    state: str
+    current_round_id: int
 
     model_config = ConfigDict(extra='allow')
-
-    @property
-    def voters(self) -> list[Voter]:
-        pass
-
-    @property
-    def rounds(self) -> list[Round]:
-        pass
 
 
 class Voter(BaseModel):
@@ -53,32 +41,12 @@ class Voter(BaseModel):
 
     model_config = ConfigDict(extra='allow')
 
-    @property
-    def game(self) -> Game:
-        pass
-
-    @property
-    def affiliations(self) -> list[Affiliation]:
-        pass
-
  
 class Round(BaseModel):
     id: int | None = None
     round_number: int
 
     game_id: int
-
-    @property
-    def game(self) -> Game:
-        pass
-
-    @property
-    def voting_events(self) -> list[VotingEvent]:
-        pass
-
-    @property
-    def parties(self) -> list[Party]:
-        pass
 
 
 class Party(BaseModel):
@@ -99,14 +67,6 @@ class Party(BaseModel):
     
     model_config = ConfigDict(extra='allow')
 
-    @property
-    def round(self) -> Round:
-        pass
-
-    @property
-    def affiliations(self) -> list[Affiliation]:
-        pass
-
 
 class Affiliation(BaseModel):
     """
@@ -122,14 +82,6 @@ class Affiliation(BaseModel):
 
     voter_id: int
     party_id: int
-
-    @property
-    def voter(self) -> Voter:
-        pass
-
-    @property
-    def party(self) -> Party:
-        pass
 
 
 class VotingEvent(BaseModel):
@@ -153,14 +105,6 @@ class VotingEvent(BaseModel):
     
     model_config = ConfigDict(extra='allow')
 
-    @property
-    def round(self) -> Round:
-        pass
-
-    @property
-    def votes(self) -> list[Vote]:
-        pass
-
 
 class Vote(BaseModel):
     """
@@ -181,11 +125,3 @@ class Vote(BaseModel):
     voting_event_id: int
     
     model_config = ConfigDict(extra='allow')
-
-    @property
-    def voter(self) -> Voter:
-        pass
-
-    @property
-    def voting_event(self) -> VotingEvent:
-        pass
