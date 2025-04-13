@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlmodel import SQLModel, Session, select
 
 from api import models as api_models
-from database.abstract_engine import AbstractEngine
+from database.abstract_engine import AbstractEngine, NoDataFoundError
 from database.sql import models as sql_models
 
 
@@ -31,7 +31,7 @@ class SQLEnging(AbstractEngine):
                     game_id=voter.game_id,
                     party_id=voter.party_id,
                 )
-            raise Exception
+            raise NoDataFoundError
     
     def add_voter(self, voter: api_models.Voter) -> api_models.Voter:
         with Session(self.engine) as session:
@@ -57,7 +57,7 @@ class SQLEnging(AbstractEngine):
                     id=party.id,
                     name=party.name,
                 )
-            raise Exception
+            raise NoDataFoundError
     
     def get_parties(self, game_id: int) -> list[api_models.Party]:
         with Session(self.engine) as session:
@@ -76,7 +76,7 @@ class SQLEnging(AbstractEngine):
                     )
                     for party in parties
                 ]
-            raise Exception
+            raise NoDataFoundError
     
     def add_affiliation(self, affiliation: api_models.Affiliation) -> api_models.Affiliation:
         with Session(self.engine) as session:
@@ -104,7 +104,7 @@ class SQLEnging(AbstractEngine):
                     name=game.name,
                     current_round_id=game.current_round_id,
                 )
-            raise Exception
+            raise NoDataFoundError
     
     def get_game_by_hash(self, game_hash: str) -> api_models.Game:
         with Session(self.engine) as session:
@@ -120,7 +120,7 @@ class SQLEnging(AbstractEngine):
                     name=game.name,
                     current_round_id=game.current_round_id,
                 )
-            raise Exception
+            raise NoDataFoundError
     
     def get_rounds(self, game_id: int) -> list[api_models.Round]:
         with Session(self.engine) as session:
@@ -155,7 +155,7 @@ class SQLEnging(AbstractEngine):
                     voting_system=event.voting_system,
                     result=event.result,
                 )
-            raise Exception
+            raise NoDataFoundError
 
     def cast_vote(self, vote: api_models.Vote) -> None:
         with Session(self.engine) as session:
@@ -166,3 +166,23 @@ class SQLEnging(AbstractEngine):
             )
             session.add(vote)
             session.commit()
+    
+    def get_votes(self, voting_event_id: int) -> list[api_models.Vote]:
+        with Session(self.engine) as session:
+            votes = session.exec(
+                select(sql_models.Vote).where(
+                    sql_models.Vote.voting_event_id == voting_event_id
+                )
+            ).all()
+            if votes:
+                return [
+                    api_models.Vote(
+                        id=vote.id,
+                        value=vote.value,
+                        voter_id=vote.voter_id,
+                        voting_event_id=vote.voting_event_id,
+                        created_at=vote.created_at,
+                    )
+                    for vote in votes
+                ]
+            raise NoDataFoundError

@@ -1,8 +1,19 @@
 from datetime import datetime, UTC
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 # add __pydantic_extra__: dict[str, int] = Field(init=False) to validate extra fields
+
+
+class VotingSystem(StrEnum):
+    MAJORITY = "MAJORITY"
+
+
+class VoteValue(StrEnum):
+    YES = "YES"
+    NO = "NO"
+    ABSTAIN = "ABSTAIN"
 
 
 class Game(BaseModel):
@@ -98,7 +109,7 @@ class VotingEvent(BaseModel):
     id: int | None = None
     title: str
     content: str
-    voting_system: str
+    voting_system: VotingSystem
     result: str | None = Field(default=None)
 
     round_id: int
@@ -118,7 +129,7 @@ class Vote(BaseModel):
     - TODO: add parameters object to hold additional information about the vote for influence voting
     """
     id: int | None = Field(default=None)
-    value: str
+    value: VoteValue
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     voter_id: int

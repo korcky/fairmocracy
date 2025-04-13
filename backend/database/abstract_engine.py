@@ -3,6 +3,10 @@ from abc import ABCMeta, abstractmethod
 from api.models import Affiliation, Voter, VotingEvent, Vote, Party, Game, Round
 
 
+class NoDataFoundError(Exception):
+    pass
+
+
 class AbstractEngine(metaclass=ABCMeta):
     @abstractmethod
     def startup_initialization(self) -> None:
@@ -52,4 +56,8 @@ class AbstractEngine(metaclass=ABCMeta):
     @abstractmethod
     def cast_vote(self, vote: Vote) -> None:
         """Save Vote into the DB"""
+        pass
+
+    @abstractmethod
+    def get_votes(self, voting_event_id: int) -> list[Vote]:
         pass

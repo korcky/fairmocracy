@@ -1,4 +1,5 @@
 import json
+import logging
 from http import HTTPStatus
 from typing import Annotated
 
@@ -8,7 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlmodel import SQLModel, Session, select
 
-from api.models import Voter, Vote, VotingEvent, Party, Game, Round, Affiliation
+from api.voting_systems import AbstractVotingSystem, VotingResult, MajorityVotingSystem
+from api.models import Voter, Vote, VotingEvent, Party, Game, Round, Affiliation, VotingSystem
 from database import AbstractEngine, SQLEnging
 from database.sql import models as sql_models  # TODO remove
 
@@ -26,6 +28,12 @@ game_router = APIRouter()
 common_router = APIRouter()
 
 DB_ENGINE = SQLEnging(url=f"sqlite:///database.sqlite3")
+# I guess we should store configuration for voting system in DB
+# and initialize class for a voting system using this data during 
+# the calculation of the voting event result
+AVAILABLE_VOTING_SYSTEMS = {
+    VotingSystem.MAJORITY: MajorityVotingSystem(),
+}
 
 
 def get_db_engine() -> AbstractEngine:
@@ -88,7 +96,7 @@ app.include_router(user_router, prefix="/v1/user")
 app.include_router(game_router, prefix="/v1/voting")
 
 
-# TODO refactor stuff below
+# TODO refactor stuff below (especially pathes and tags)
 @common_router.get(
     "/game/{game_id}/parties",
     response_model=list[Party],
@@ -131,5 +139,26 @@ async def register_user(user: Voter, db_engine: AbstractEngine = Depends(get_db_
 async def register_to_vote(affiliation: Affiliation, db_engine: AbstractEngine = Depends(get_db_engine)) -> Affiliation:
     # TODO: accept juat party_id and add check for round
     return db_engine.add_affiliation(affiliation=affiliation)
+
+
+# TODO: get voting event through Dependency?
+@common_router.post(
+    "/voting_event/{voting_event_id}/conclude",
+)
+async def conclude_voting(voting_event_id: int, db_engine: AbstractEngine = Depends(get_db_engine)):
+    voting_event = db_engine.get_voting_event(voting_event_id=voting_event_id)
+    voting_system = AVAILABLE_VOTING_SYSTEMS.get(voting_event.voting_system)
+    if not voting_system:
+        logging.error(
+            f"Unknown voting system ({voting_event.voting_system}) for voting event {voting_event_id}"
+        )
+        return Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
+    votes = db_engine.get_votes(voting_event_id=voting_event_id)
+    result, side_effects = voting_system.voting_result(votes=votes)
+    # TODO:
+    # 1. save result to DB
+    # 2. work with side effects
+    return Response(status_code=HTTPStatus.OK, content={"voting_event_result": result})
+
 
 app.include_router(common_router)
