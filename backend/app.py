@@ -11,7 +11,7 @@ from sqlmodel import SQLModel, Session, select
 
 from api.voting_systems import AbstractVotingSystem, VotingResult, MajorityVotingSystem
 from api.models import Voter, Vote, VotingEvent, Party, Game, Round, Affiliation, VotingSystem
-from database import AbstractEngine, SQLEnging
+from database import AbstractEngine, SQLEngine
 from database.sql import models as sql_models  # TODO remove
 
 app = FastAPI()
@@ -27,7 +27,7 @@ user_router = APIRouter()
 game_router = APIRouter()
 common_router = APIRouter()
 
-DB_ENGINE = SQLEnging(url=f"sqlite:///database.sqlite3")
+DB_ENGINE = SQLEngine(url=f"sqlite:///database.sqlite3")
 # I guess we should store configuration for voting system in DB
 # and initialize class for a voting system using this data during 
 # the calculation of the voting event result

@@ -6,7 +6,7 @@ from database.abstract_engine import AbstractEngine, NoDataFoundError
 from database.sql import models as sql_models
 
 
-class SQLEnging(AbstractEngine):
+class SQLEngine(AbstractEngine):
     def __init__(self, url: str) -> None:
         self.engine = create_engine(
             url,
