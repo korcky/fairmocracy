@@ -1,5 +1,5 @@
 from api.voting_systems.abstract import AbstractVotingSystem, VotingResult
-from api.models import VoteValue
+from api.models import VoteValue, Vote
 
 
 class MajorityVotingSystem(AbstractVotingSystem):
