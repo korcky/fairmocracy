@@ -11,6 +11,8 @@ class Game(SQLModel, table=True):
     name: str = Field()
     current_round_id: int | None = Field(default=None)
     current_voting_event_id: int | None = Field(default=None)
+    rounds: list["Round"] = Relationship(back_populates="game")
+    voters: list["Voter"] = Relationship(back_populates="game")
     status: str = Field()
 
 
@@ -20,7 +22,6 @@ class Voter(SQLModel, table=True):
 
     game_id: int = Field(foreign_key="game.id")
     game: "Game" = Relationship(back_populates="voters")
-
     votes: list["Vote"] = Relationship(back_populates="voter")
     affiliations: list["Affiliation"] = Relationship(back_populates="voter")
 
@@ -31,7 +32,6 @@ class Round(SQLModel, table=True):
 
     game_id: int = Field(foreign_key="game.id")
     game: "Game" = Relationship(back_populates="rounds")
-
     voting_events: list["VotingEvent"] = Relationship(back_populates="round")
     parties: list["Party"] = Relationship(back_populates="round")
 

@@ -2,7 +2,6 @@ import json
 import logging
 from http import HTTPStatus
 from typing import Annotated
-from round import Round
 
 from fastapi import APIRouter, Depends, FastAPI, Cookie
 from fastapi.responses import Response, JSONResponse
@@ -11,11 +10,14 @@ from sqlalchemy import create_engine
 from sqlmodel import SQLModel, Session, select
 
 from api.voting_systems import AbstractVotingSystem, VotingResult, MajorityVotingSystem
-from api.models import Voter, Vote, VotingEvent, Party, Game, Round, Affiliation, VotingSystem
+from api.models import Voter, Vote, VotingEvent, Party, Game, Round, Affiliation, VotingSystem, GameStatus
+from api.sse_connection_manager import SSEConnectionManager
 from database import AbstractEngine, SQLEngine
 from database.sql import models as sql_models  # TODO remove
 
 app = FastAPI()
+
+connection_manager = SSEConnectionManager()
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,6 +53,7 @@ def on_startup():
         test_game = sql_models.Game(
             name="Test Game", hash="1234", rounds=[
                 sql_models.Round(round_number=0, parties=[sql_models.Party(name="red"), sql_models.Party(name="blue")], rules="FI")],
+                status=GameStatus.STARTED,
         )
         with Session(DB_ENGINE.engine) as session:
             session.add(test_game)
@@ -82,12 +85,10 @@ async def login(key: str | None = None, db_engine: AbstractEngine = Depends(get_
     tags=["voting"],
 )
 async def get_current_state(game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)):
-    with Session(engine) as session:
-        game = session.exec(select(Game).where(Game.id == game_id)).first()
-        if not game:
-            return Response(status_code=HTTPStatus.BAD_REQUEST)
-        
-        return {"current_round": game.current_round, "current_voting_event": game.current_voting_event, "status": game.status}
+    game = db_engine.get_game(game_id=game_id)
+    if not game:
+        return Response(status_code=HTTPStatus.BAD_REQUEST)
+    return game.get_state()
     
 @game_router.post(
     "/cast_vote",
@@ -164,6 +165,12 @@ async def conclude_voting(voting_event_id: int, db_engine: AbstractEngine = Depe
     # 1. save result to DB
     # 2. work with side effects
     return Response(status_code=HTTPStatus.OK, content={"voting_event_result": result})
+
+@common_router.get(
+    "/sse/game-state"
+)
+async def stream_game_state():
+    return StreamingResponse(connection_manager.connect(), media_type="text/event_stream")
 
 
 app.include_router(common_router)
