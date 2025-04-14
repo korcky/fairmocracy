@@ -22,7 +22,7 @@
 				}
 			});
 			if (!rounds || rounds.length == 0) {
-				fetch(`${PUBLIC_BACKEND_URL}/game/{game_id}/rounds`).then((res) => {
+				fetch(`${PUBLIC_BACKEND_URL}/game/${game.id}/rounds`).then((res) => {
 					if (res.ok) {
 						res.json().then(respJson => setUserData({ game, name, userId, affiliations, rounds: respJson }));
 					} else {

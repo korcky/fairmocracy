@@ -2,6 +2,7 @@ import json
 import logging
 from http import HTTPStatus
 from typing import Annotated
+from round import Round
 
 from fastapi import APIRouter, Depends, FastAPI, Cookie
 from fastapi.responses import Response, JSONResponse
@@ -77,13 +78,17 @@ async def login(key: str | None = None, db_engine: AbstractEngine = Depends(get_
 
 
 @game_router.get(
-    "/current_state",
+    "/current_state/{game_id}",
     tags=["voting"],
 )
-async def get_current_state(db_engine: AbstractEngine = Depends(get_db_engine)):
-    return Response(status_code=HTTPStatus.NO_CONTENT)
-
-
+async def get_current_state(game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)):
+    with Session(engine) as session:
+        game = session.exec(select(Game).where(Game.id == game_id)).first()
+        if not game:
+            return Response(status_code=HTTPStatus.BAD_REQUEST)
+        
+        return {"current_round": game.current_round, "current_voting_event": game.current_voting_event, "status": game.status}
+    
 @game_router.post(
     "/cast_vote",
     tags=["voting"],

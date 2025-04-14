@@ -5,15 +5,13 @@ from datetime import datetime, UTC
 
 from sqlmodel import SQLModel, Field, Relationship
 
-
 class Game(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     hash: str = Field(default = ''.join(random.choices(string.ascii_lowercase, k=4)))
     name: str = Field()
     current_round_id: int | None = Field(default=None)
-
-    voters: list["Voter"] = Relationship(back_populates="game")
-    rounds: list["Round"] = Relationship(back_populates="game")    
+    current_voting_event_id: int | None = Field(default=None)
+    status: str = Field()
 
 
 class Voter(SQLModel, table=True):
