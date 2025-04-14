@@ -14,7 +14,7 @@
 
 	$effect(() => {
 		if (game) {
-			fetch(`${PUBLIC_BACKEND_URL}/parties/game/${game.id}`).then((res) => {
+			fetch(`${PUBLIC_BACKEND_URL}/game/${game.id}/parties`).then((res) => {
 				if (res.ok) {
 					res.json().then(respJson => partyOptions = respJson);
 				} else {
@@ -22,7 +22,7 @@
 				}
 			});
 			if (!rounds || rounds.length == 0) {
-				fetch(`${PUBLIC_BACKEND_URL}/rounds/${game.id}`).then((res) => {
+				fetch(`${PUBLIC_BACKEND_URL}/game/{game_id}/rounds`).then((res) => {
 					if (res.ok) {
 						res.json().then(respJson => setUserData({ game, name, userId, affiliations, rounds: respJson }));
 					} else {
