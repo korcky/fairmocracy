@@ -3,15 +3,26 @@ from api.models import VoteValue, Vote
 
 
 class MajorityVotingSystem(AbstractVotingSystem):
-    """Simply Vote(yes)/Vote(No) > pass_threshold"""
-    def __init__(self, pass_threshold: float = 0.5):
+    """
+    Simply Votes(yes)/Votes(No) > pass_threshold
+
+    with is_abstain_count_to_total == True:
+        Votes(yes)/Votes(No and Abstain) > pass_threshold
+    """
+
+    def __init__(
+        self,
+        pass_threshold: float = 0.5,
+        is_abstain_count_to_total: bool = False,
+    ):
         self.pass_threshold = pass_threshold
+        self.is_abstain_count_to_total = is_abstain_count_to_total
 
     def voting_result(self, votes: list[Vote]) -> tuple[VotingResult, dict]:
         votes = [
             vote.value == VoteValue.YES
             for vote in votes
-            if vote.value != VoteValue.ABSTAIN
+            if self.is_abstain_count_to_total or vote.value != VoteValue.ABSTAIN
         ]
         result = (
             VotingResult.ACCEPTED
