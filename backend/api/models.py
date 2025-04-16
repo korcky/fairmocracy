@@ -47,11 +47,11 @@ class Game(BaseModel):
     current_voting_event_id: int | None = Field(default=None, foreign_key="voting_event.id")
     status : GameStatus = Field(default=GameStatus.WAITING)
 
-    def get_state():
+    def get_state(self):
         return {
-            status: self.status,
-            current_round: self.current_round,
-            current_voting_event: self.current_voting_event
+            "status": self.status,
+            "current_round": self.current_round_id,
+            "current_voting_event": self.current_voting_event_id
         }
 
     model_config = ConfigDict(extra='allow')

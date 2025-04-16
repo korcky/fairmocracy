@@ -4,6 +4,7 @@ import { source } from "sveltekit-sse";
 export function createSSEConnection(endpoint, options = {}) {
   const defaultOptions = {
     options: {
+      method: "GET",
       headers: {
         // "X-API-Key": SSE_API_KEY,
       },
@@ -12,6 +13,11 @@ export function createSSEConnection(endpoint, options = {}) {
   };
 
   const config = {
+    close({ connect }) {
+      console.log('reconnecting...')
+      connect()
+    },
+
     ...defaultOptions,
     ...options,
     options: {
@@ -23,15 +29,16 @@ export function createSSEConnection(endpoint, options = {}) {
       },
     },
   };
-
   return source(endpoint, config);
 }
 
 export function selectJsonEvent(connection, eventName = "message") {
-  return connection.select(eventName).json(({ error, raw }) => {
+  return connection.select(eventName).json(({ error, raw, previous }) => {
+    console.log("huhhu")
     if (error) {
       console.error("Failed to parse JSON:", raw, error);
-      return false;
+      console.log(raw)
+      return previous;
     }
     console.log("Received JSON event:", eventName, raw);
     return raw;
