@@ -17,7 +17,6 @@ export function createSSEConnection(endpoint, options = {}) {
       console.log('reconnecting...')
       connect()
     },
-
     ...defaultOptions,
     ...options,
     options: {
@@ -34,10 +33,8 @@ export function createSSEConnection(endpoint, options = {}) {
 
 export function selectJsonEvent(connection, eventName = "message") {
   return connection.select(eventName).json(({ error, raw, previous }) => {
-    console.log("huhhu")
     if (error) {
       console.error("Failed to parse JSON:", raw, error);
-      console.log(raw)
       return previous;
     }
     console.log("Received JSON event:", eventName, raw);
