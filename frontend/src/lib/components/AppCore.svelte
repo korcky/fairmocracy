@@ -7,8 +7,13 @@
 	import GameSelectionScreen from '$lib/components/GameSelectionScreen.svelte';
 	import RegisterScreen from './RegisterScreen.svelte';
 	import { currentUser } from '$lib/stores/userData.svelte.js';
-	
-	// First landing on the page renders the regisster view
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import { createSSEConnection, selectJsonEvent } from '$lib/services/sseService.js'
+
+	// Listen to backend server sent events
+	const connection = createSSEConnection(`${PUBLIC_BACKEND_URL}/sse/game-state`)
+	const jsonData = selectJsonEvent(connection, 'message');
+
 	const { game, name, affiliations, userId } = $currentUser;
 
 	let currentScreen = $state('select');
