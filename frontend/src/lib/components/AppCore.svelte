@@ -104,7 +104,6 @@
 		currentScreen = 'wait';
 	}
 </script>
-{$gameState}
 
 {#if currentScreen == 'select'}
 	<GameSelectionScreen gameState={gameState} onSelect={handleSelect} />
