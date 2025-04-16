@@ -186,3 +186,19 @@ class SQLEngine(AbstractEngine):
                     for vote in votes
                 ]
             raise NoDataFoundError
+
+    def get_active_game():
+        with Session(self.engine) as session:
+            game = session.exec(
+                select(sql_models.Game).where(
+                    sql_models.Game.status != api_models.GameStatus.ENDED
+                )
+            ).first()
+            if game:
+                return api_models.Game(
+                    id=game.id,
+                    hash=game.hash,
+                    name=game.name,
+                    current_round_id=game.current_round_id,
+                )
+            raise NoDataFoundError
