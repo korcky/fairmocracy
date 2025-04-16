@@ -3,15 +3,13 @@
 	import { setUserData, currentUser } from '$lib/stores/userData.svelte.js';
     import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	
-	let { onRegistration } = $props();
+	let { onRegistration, gameState } = $props();
 	let party = $state('');
 	let errors = $state({});
 	let {game, name, userId, affiliations } = $currentUser;
 	let rounds = $derived($currentUser.rounds);
 	let partyOptions = $state([]);
-	let gameState = JSON.parse(game.state);
-	// console.log(gameState)
-
+	console.log(gameState)
 	$effect(() => {
 		if (game) {
 			fetch(`${PUBLIC_BACKEND_URL}/game/${game.id}/parties`).then((res) => {
@@ -49,7 +47,7 @@
 				},
 				body: JSON.stringify({ 
 					party_id: parseInt(party),
-					round_id: rounds[gameState.current_round].id,
+					round_id: rounds[gameState.current_round]?.id,
 					voter_id: userId })
 			}).then((res) => {
 				if (res.ok) {

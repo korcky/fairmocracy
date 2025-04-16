@@ -1,11 +1,11 @@
 import { source } from "sveltekit-sse";
-import { SSE_API_KEY } from "$env/static/private";
+// import { SSE_API_KEY } from "$env/static/private";
 
 export function createSSEConnection(endpoint, options = {}) {
   const defaultOptions = {
     options: {
       headers: {
-        "X-API-Key": SSE_API_KEY,
+        // "X-API-Key": SSE_API_KEY,
       },
     },
     // Other default configuration here
@@ -33,6 +33,7 @@ export function selectJsonEvent(connection, eventName = "message") {
       console.error("Failed to parse JSON:", raw, error);
       return false;
     }
+    console.log("Received JSON event:", eventName, raw);
     return raw;
   });
 }

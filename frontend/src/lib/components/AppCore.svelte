@@ -11,12 +11,13 @@
 	import { createSSEConnection, selectJsonEvent } from '$lib/services/sseService.js'
 
 	// Listen to backend server sent events
-	const connection = createSSEConnection(`${PUBLIC_BACKEND_URL}/sse/game-state`)
-	const jsonData = selectJsonEvent(connection, 'message');
+	const connection = createSSEConnection(`${PUBLIC_BACKEND_URL}/sse/game-gameState`)
+	const gameState = selectJsonEvent(connection, 'message');
 
-	const { game, name, affiliations, userId } = $currentUser;
+	const { game, name, affiliations, } = $currentUser;
 
-	let currentScreen = $state('select');
+	let currentScreen = 'select';
+	
 	const handleSelect = () => {
 		currentScreen = 'register';
 	}
@@ -34,9 +35,8 @@
 		currentScreen = 'select';
 	}
 
-	if (game && game.state.active) {
+	if (game && gameState.status == "started") {
 		currentScreen = 'vote'
-
 	}
 
 	// After succesfully registered, go to wait room
@@ -68,17 +68,17 @@
 
 
 {#if currentScreen == 'select'}
-	<GameSelectionScreen onSelect={handleSelect} />
+	<GameSelectionScreen gameState={gameState} onSelect={handleSelect} />
 {:else if currentScreen == 'register'}
-	<RegisterScreen onRegistration={handleRegistration} />
+	<RegisterScreen gameState={gameState} onRegistration={handleRegistration} />
 {:else if currentScreen == 'registerToVote'}
-	<RegisterToVoteScreen onRegistration={handleRegisterToVote} />
+	<RegisterToVoteScreen gameState={gameState} onRegistration={handleRegisterToVote} />
 {:else if currentScreen == 'welcome'}
-	<WelcomeScreen onNewVote={handleNewVote} />
+	<WelcomeScreen gameState={gameState} onNewVote={handleNewVote} />
 {:else if currentScreen == 'info'}
-	<VoteInfoScreen onVoteStart={handleVoteStart} />
+	<VoteInfoScreen gameState={gameState} onVoteStart={handleVoteStart} />
 {:else if currentScreen == 'vote'}
-	<VoteScreen onVoteGiven={handleVoteGiven} />
+	<VoteScreen gameState={gameState} onVoteGiven={handleVoteGiven} />
 {:else if currentScreen == 'wait'}
-	<VoteWaitScreen onNewVote={handleNewVote} />
+	<VoteWaitScreen gameState={gameState} onNewVote={handleNewVote} />
 {/if}
