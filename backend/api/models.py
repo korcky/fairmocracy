@@ -1,5 +1,8 @@
+import random 
+import string
 from datetime import datetime, UTC
 from enum import StrEnum
+
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,6 +19,15 @@ class VoteValue(StrEnum):
     ABSTAIN = "ABSTAIN"
 
 
+from enum import Enum
+from sqlmodel import SQLModel, Field, Relationship
+
+class GameStatus(StrEnum):
+    WAITING = "waiting"
+    STARTED = "started"
+    PAUSED = "paused"
+    ENDED = "ended"
+
 class Game(BaseModel):
     """
     A game models a voting game.
@@ -24,13 +36,26 @@ class Game(BaseModel):
     - hash: A unique hash for the game. (not really a hash)
     - name: The name of the game.
     - current_round_id: id for a current Round.
+    - current_voting_event_id: id for a current VotingEvent.
+    - status: The status of the game (waiting, started, paused, ended).
     """
-    id: int | None = None
-    hash: str
-    name: str
-    current_round_id: int
+
+    id: int | None = Field(default=None, primary_key=True)
+    hash: str = Field(default = ''.join(random.choices(string.ascii_lowercase, k=4)))
+    name: str = Field()
+    current_round_id: int = Field(default=0)
+    current_voting_event_id: int | None = Field(default=None, foreign_key="voting_event.id")
+    status : GameStatus = Field(default=GameStatus.WAITING)
+
+    def get_state(self):
+        return {
+            "status": self.status,
+            "current_round": self.current_round_id,
+            "current_voting_event": self.current_voting_event_id
+        }
 
     model_config = ConfigDict(extra='allow')
+
 
 
 class Voter(BaseModel):
@@ -47,7 +72,6 @@ class Voter(BaseModel):
 
     id: int | None = None
     name: str
-
     game_id: int
 
     model_config = ConfigDict(extra='allow')

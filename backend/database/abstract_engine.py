@@ -61,3 +61,7 @@ class AbstractEngine(metaclass=ABCMeta):
     @abstractmethod
     def get_votes(self, voting_event_id: int) -> list[Vote]:
         pass
+
+    @abstractmethod
+    def get_active_game() -> Game:
+        pass

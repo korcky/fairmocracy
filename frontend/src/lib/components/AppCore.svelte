@@ -9,14 +9,54 @@
 	import { currentUser } from '$lib/stores/userData.svelte.js';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { createSSEConnection, selectJsonEvent } from '$lib/services/sseService.js'
+	import { writable } from 'svelte/store';
+	import { browser } from '$app/environment'
 
 	// Listen to backend server sent events
-	const connection = createSSEConnection(`${PUBLIC_BACKEND_URL}/sse/game-state`)
-	const jsonData = selectJsonEvent(connection, 'message');
+	const gameState = writable({});
+	//if (browser) {
+	//	const evtSource = new EventSource(`${PUBLIC_BACKEND_URL}/sse/game-state`);
+	//	evtSource.onmessage = function(event) {
+	//		console.log(event)
+	//		var dataobj = JSON.parse(event.data);
+	//		gameState.update(dataobj);
+	//	}
+	//	evtSource.onerror = function(event) {
+	//		console.log("Error: ", event);
+	//	};
+	//}
 
-	const { game, name, affiliations, userId } = $currentUser;
+	//const gameState = selectJsonEvent(connection, 'message');
 
-	let currentScreen = $state('select');
+
+	const { game, name, affiliations, } = $currentUser;
+    let poller
+	const setupPoller = (id) => {
+        if (poller) {
+            clearInterval(poller)
+        }
+        poller = setInterval(doPoll(id), 2000)
+	}
+
+	const doPoll = (id) => async () => {
+        const response = await fetch(`${PUBLIC_BACKEND_URL}/v1/voting/${id}/state`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		})
+		if (response.ok) {
+			const data = await response.json()
+			gameState.set(data)}
+        
+    }
+	if (game && game.id) {
+		console.log("polling")
+		setupPoller(game.id)	
+	}
+
+	let currentScreen = 'select';
+	
 	const handleSelect = () => {
 		currentScreen = 'register';
 	}
@@ -34,9 +74,8 @@
 		currentScreen = 'select';
 	}
 
-	if (game && game.state.active) {
+	if (game && gameState.status == "started") {
 		currentScreen = 'vote'
-
 	}
 
 	// After succesfully registered, go to wait room
@@ -66,19 +105,18 @@
 	}
 </script>
 
-
 {#if currentScreen == 'select'}
-	<GameSelectionScreen onSelect={handleSelect} />
+	<GameSelectionScreen gameState={gameState} onSelect={handleSelect} />
 {:else if currentScreen == 'register'}
-	<RegisterScreen onRegistration={handleRegistration} />
+	<RegisterScreen gameState={gameState} onRegistration={handleRegistration} />
 {:else if currentScreen == 'registerToVote'}
-	<RegisterToVoteScreen onRegistration={handleRegisterToVote} />
+	<RegisterToVoteScreen gameState={gameState} onRegistration={handleRegisterToVote} />
 {:else if currentScreen == 'welcome'}
-	<WelcomeScreen onNewVote={handleNewVote} />
+	<WelcomeScreen gameState={gameState} onNewVote={handleNewVote} />
 {:else if currentScreen == 'info'}
-	<VoteInfoScreen onVoteStart={handleVoteStart} />
+	<VoteInfoScreen gameState={gameState} onVoteStart={handleVoteStart} />
 {:else if currentScreen == 'vote'}
-	<VoteScreen onVoteGiven={handleVoteGiven} />
+	<VoteScreen gameState={gameState} onVoteGiven={handleVoteGiven} />
 {:else if currentScreen == 'wait'}
-	<VoteWaitScreen onNewVote={handleNewVote} />
+	<VoteWaitScreen gameState={gameState} onNewVote={handleNewVote} />
 {/if}
