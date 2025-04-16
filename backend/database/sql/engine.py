@@ -187,7 +187,7 @@ class SQLEngine(AbstractEngine):
                 ]
             raise NoDataFoundError
 
-    def get_active_game():
+    def get_active_game(self):
         with Session(self.engine) as session:
             game = session.exec(
                 select(sql_models.Game).where(
@@ -200,5 +200,7 @@ class SQLEngine(AbstractEngine):
                     hash=game.hash,
                     name=game.name,
                     current_round_id=game.current_round_id,
+                    current_voting_event_id=game.current_voting_event_id,
+                    status=game.status
                 )
             raise NoDataFoundError
