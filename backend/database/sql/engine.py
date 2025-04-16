@@ -10,7 +10,7 @@ class SQLEngine(AbstractEngine):
     def __init__(self, url: str) -> None:
         self.engine = create_engine(
             url,
-            echo=True,
+            # echo=True,
             connect_args={"check_same_thread": False},
         )
 

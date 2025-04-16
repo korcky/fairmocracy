@@ -4,7 +4,9 @@ import signal
 import logging
 from http import HTTPStatus
 from typing import Annotated
+
 import functools
+
 
 from fastapi import APIRouter, Depends, FastAPI, Cookie
 from fastapi.responses import Response, JSONResponse, StreamingResponse
@@ -62,6 +64,21 @@ def broadcast_game_state(f):
     return wrapper
 
 
+"""
+Decorator to broadcast game state changes to all connected clients using SSE
+"""
+#def broadcast_game_state(f):
+#    @wraps(f)
+#    async def wrapper(*args, **kwargs):
+#        connection_manager = SSEConnectionManager()
+#        engine = get_db_engine()
+#        game = engine.get_active_game()
+#        retval = await f(*args, **kwargs)
+#        await connection_manager.broadcast(game.get_state())
+#        return retval
+#    return wrapper
+
+
 @app.on_event("startup")
 def on_startup():
     get_db_engine().startup_initialization()
@@ -82,7 +99,6 @@ def on_startup():
             session.add(test_game)
             session.commit()
 
-
 @app.on_event("startup")
 async def startup_event():
     loop = asyncio.get_running_loop()
@@ -91,10 +107,12 @@ async def startup_event():
     except NotImplementedError:
         pass
 
+
 @user_router.get(
     "/{user_id}",
     tags=["user"],
 )
+#@broadcast_game_state
 async def get_user(user_id: str, db_engine: AbstractEngine = Depends(get_db_engine)):
     return Response(status_code=HTTPStatus.NO_CONTENT)
 
@@ -200,6 +218,5 @@ async def conclude_voting(voting_event_id: int, db_engine: AbstractEngine = Depe
 @common_router.api_route("/sse/game-state", methods=["GET", "POST"])
 async def stream_game_state():
     return StreamingResponse(connection_manager.connect(), media_type="text/event-stream")
-
 
 app.include_router(common_router)
