@@ -1,8 +1,12 @@
+import asyncio
 import json
+import signal
 import logging
 from http import HTTPStatus
 from typing import Annotated
-from functools import wraps
+
+import functools
+
 
 from fastapi import APIRouter, Depends, FastAPI, Cookie
 from fastapi.responses import Response, JSONResponse, StreamingResponse
@@ -42,6 +46,23 @@ AVAILABLE_VOTING_SYSTEMS = {
 def get_db_engine() -> AbstractEngine:
     return DB_ENGINE
 
+connection_manager = SSEConnectionManager()
+
+"""
+Decorator to broadcast game state changes to all connected clients using SSE
+"""
+def broadcast_game_state(f):
+    @functools.wraps(f)
+    async def wrapper(*args, **kwargs):
+        engine = get_db_engine()
+        response = await f(*args, **kwargs)
+        game = engine.get_active_game()
+        state = game.get_state()
+        print("Broadcasting game state:", state)
+        await connection_manager.broadcast(state)
+        return response
+    return wrapper
+
 
 """
 Decorator to broadcast game state changes to all connected clients using SSE
@@ -78,6 +99,15 @@ def on_startup():
             session.add(test_game)
             session.commit()
 
+@app.on_event("startup")
+async def startup_event():
+    loop = asyncio.get_running_loop()
+    try:
+        loop.add_signal_handler(signal.SIGINT, connection_manager.close)
+    except NotImplementedError:
+        pass
+
+
 @user_router.get(
     "/{user_id}",
     tags=["user"],
@@ -91,12 +121,13 @@ async def get_user(user_id: str, db_engine: AbstractEngine = Depends(get_db_engi
     "/login",
     tags=["user"],
 )
+@broadcast_game_state
 async def login(key: str | None = None, db_engine: AbstractEngine = Depends(get_db_engine)):
     return Response(status_code=HTTPStatus.NO_CONTENT)
 
 
 @game_router.get(
-    "/{game_id}/state",
+    "/current_state/{game_id}",
     tags=["voting"],
 )
 async def get_current_state(game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)):
@@ -104,15 +135,16 @@ async def get_current_state(game_id: int, db_engine: AbstractEngine = Depends(ge
     if not game:
         return Response(status_code=HTTPStatus.BAD_REQUEST)
     return game.get_state()
-    
+
 @game_router.post(
     "/cast_vote",
     tags=["voting"],
 )
-#@broadcast_game_state
+@broadcast_game_state
 async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engine)):
     db_engine.cast_vote(vote)
     return Response(status_code=HTTPStatus.NO_CONTENT)
+
 
 app.include_router(user_router, prefix="/v1/user")
 app.include_router(game_router, prefix="/v1/voting")
@@ -149,7 +181,7 @@ async def get_game_by_hash(game_hash: str, db_engine: AbstractEngine = Depends(g
     "/register",
     response_model=Voter,
 )
-#@broadcast_game_state
+@broadcast_game_state
 async def register_user(user: Voter, db_engine: AbstractEngine = Depends(get_db_engine)) -> Voter:
     return db_engine.add_voter(voter=user)
 
@@ -157,7 +189,7 @@ async def register_user(user: Voter, db_engine: AbstractEngine = Depends(get_db_
     "/register_to_vote",
     response_model=Affiliation
 )
-##@broadcast_game_state
+@broadcast_game_state
 async def register_to_vote(affiliation: Affiliation, db_engine: AbstractEngine = Depends(get_db_engine)) -> Affiliation:
     # TODO: accept juat party_id and add check for round
     return db_engine.add_affiliation(affiliation=affiliation)
@@ -167,7 +199,7 @@ async def register_to_vote(affiliation: Affiliation, db_engine: AbstractEngine =
 @common_router.post(
     "/voting_event/{voting_event_id}/conclude",
 )
-##@broadcast_game_state
+@broadcast_game_state
 async def conclude_voting(voting_event_id: int, db_engine: AbstractEngine = Depends(get_db_engine)):
     voting_event = db_engine.get_voting_event(voting_event_id=voting_event_id)
     voting_system = AVAILABLE_VOTING_SYSTEMS.get(voting_event.voting_system)
@@ -183,11 +215,8 @@ async def conclude_voting(voting_event_id: int, db_engine: AbstractEngine = Depe
     # 2. work with side effects
     return Response(status_code=HTTPStatus.OK, content={"voting_event_result": result})
 
-@common_router.get(
-    "/sse/game-state"
-)
+@common_router.api_route("/sse/game-state", methods=["GET", "POST"])
 async def stream_game_state():
-    connection_manager = SSEConnectionManager()
-    return StreamingResponse(connection_manager.connect(), media_type="text/event_stream")
+    return StreamingResponse(connection_manager.connect(), media_type="text/event-stream")
 
 app.include_router(common_router)

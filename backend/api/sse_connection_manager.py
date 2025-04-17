@@ -1,9 +1,9 @@
 import asyncio
 import json
 import signal
+
 from contextlib import asynccontextmanager
 from typing import Any
-
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
@@ -13,29 +13,43 @@ class SSEConnectionManager:
     from https://stackoverflow.com/a/79423537
     """
     _instance = None
-    active_connections: list[asyncio.Queue] = []
+
     def __new__(class_, *args, **kwargs):
-        if not isinstance(class_._instance, class_):
-            class_._instance = object.__new__(class_, *args, **kwargs)
+        if class_._instance is None:
+            class_._instance = super().__new__(class_)
+            class_._instance.active_connections: list[asyncio.Queue] = []  # type: ignore
         return class_._instance
+
+    def __init__(self):
+        try:
+            loop = asyncio.get_running_loop()
+            try:
+                loop.add_signal_handler(signal.SIGINT, self.close)
+            except NotImplementedError:
+                pass
+        except RuntimeError:
+            pass
 
     async def connect(self):
         queue = asyncio.Queue()
         self.active_connections.append(queue)
-        while True:
-            try:
+        try:
+            while True:
                 event = await queue.get()
-                yield f"event: message\ndata: {json.dumps(event)}\n"
-            except (asyncio.CancelledError, asyncio.QueueShutDown):
+                print("Broadcasting event to client:", event)  # Debug log here
+                yield f"data: {json.dumps(event)}\n\n"
+        except asyncio.CancelledError:
+            if queue in self.active_connections:
                 self.active_connections.remove(queue)
-                break
+            raise
+        finally:
+            if queue in self.active_connections:
+                self.active_connections.remove(queue)
 
     async def broadcast(self, message: dict[str, Any]):
-        print("Broadcasting::")
-        print(self.active_connections)
         await asyncio.gather(*(queue.put(message) for queue in self.active_connections))
 
     def close(self):
-        for queue in self.active_connections:
-            queue.shutdown()
+        self.active_connections.clear()
 
+manager = SSEConnectionManager()

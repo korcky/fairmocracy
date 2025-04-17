@@ -200,5 +200,7 @@ class SQLEngine(AbstractEngine):
                     hash=game.hash,
                     name=game.name,
                     current_round_id=game.current_round_id,
+                    current_voting_event_id=game.current_voting_event_id,
+                    status=game.status
                 )
             raise NoDataFoundError

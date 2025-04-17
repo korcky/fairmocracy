@@ -49,9 +49,12 @@ class Game(BaseModel):
 
     def get_state(self):
         return {
+            "id": self.id,
+            "hash": self.hash,
+            "name": self.name,
+            "current_round_id": self.current_round_id,
+            "current_voting_event_id": self.current_voting_event_id,
             "status": self.status,
-            "current_round": self.current_round_id,
-            "current_voting_event": self.current_voting_event_id
         }
 
     model_config = ConfigDict(extra='allow')
