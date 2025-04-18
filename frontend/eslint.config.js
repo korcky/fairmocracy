@@ -33,6 +33,6 @@ export default [
 		// Declare $state as a global variable to prevent no-undef errors
 		globals: {
 			$state: 'readonly'
-		},
-	},
+		}
+	}
 ];

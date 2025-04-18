@@ -1,36 +1,17 @@
 <script>
 	import { z } from 'zod';
 	import { setUserData, currentUser } from '$lib/stores/userData.svelte.js';
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-	
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import { parties } from '$lib/stores/gameData.svelte.js';
+
 	let { onRegistration, gameState } = $props();
 	let party = $state('');
 	let errors = $state({});
-	let {game, name, userId, affiliations } = $currentUser;
+	let { game, name, userId, affiliations } = $currentUser;
 	let rounds = $derived($currentUser.rounds);
-	let partyOptions = $state([]);
-	console.log(gameState)
-	$effect(() => {
-		if (game) {
-			fetch(`${PUBLIC_BACKEND_URL}/game/${game.id}/parties`).then((res) => {
-				if (res.ok) {
-					res.json().then(respJson => partyOptions = respJson);
-				} else {
-					errors = { api: ['Failed to fetch parties'] };
-				}
-			});
-			if (!rounds || rounds.length == 0) {
-				fetch(`${PUBLIC_BACKEND_URL}/game/${game.id}/rounds`).then((res) => {
-					if (res.ok) {
-						res.json().then(respJson => setUserData({ game, name, userId, affiliations, rounds: respJson }));
-					} else {
-						errors = { api: ['Failed to fetch rounds'] };
-					}
-				});
-			}
-		}
-	})
-	
+
+	console.log(gameState);
+
 	let formValidator = z.object({
 		party: z.string().nonempty('Select your party')
 	});
@@ -38,35 +19,43 @@
 	const register = () => {
 		errors = {};
 		try {
-			const validatedData = formValidator.parse({  party });
+			const validatedData = formValidator.parse({ party });
 			const { party: validParty } = validatedData;
 			fetch(`${PUBLIC_BACKEND_URL}/register_to_vote`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ 
+				body: JSON.stringify({
 					party_id: parseInt(party),
 					round_id: rounds[gameState.current_round]?.id,
-					voter_id: userId })
+					voter_id: userId
+				})
 			}).then((res) => {
 				if (res.ok) {
-					setUserData({name,game,userId,affiliations: { ...affiliations, [gameState.current_round]: { party: validParty } }});
+					setUserData({
+						name,
+						game,
+						userId,
+						affiliations: { ...affiliations, [gameState.current_round]: { party: validParty } }
+					});
 					onRegistration();
 				} else {
 					errors = { name: ['Registration failed'] };
 				}
-			})
+			});
 		} catch (err) {
-			console.error(err)
+			console.error(err);
 			if (err instanceof z.ZodError) {
 				errors = err.flatten().fieldErrors;
 			}
 		}
-	}
+	};
 </script>
 
-<p class="p-4 text-center text-lg">Round {gameState.current_round}: select the party you represent.</p>
+<p class="p-4 text-center text-lg">
+	Round {gameState.current_round}: select the party you represent.
+</p>
 
 <div class="form-container">
 	<div class="fields">
@@ -78,11 +67,11 @@
 				onchange={(e) => (party = e.target.value)}
 				class="select variant-form-material"
 			>
-			<option value="" disabled selected>Select your party</option>
-			{#if game}
-				{#each partyOptions as p}
-					<option value={p.id}>{p.name}</option>
-				{/each}
+				<option value="" disabled selected>Select your party</option>
+				{#if game}
+					{#each $parties as p}
+						<option value={p.id}>{p.name}</option>
+					{/each}
 				{/if}
 			</select>
 			{#if errors.party}

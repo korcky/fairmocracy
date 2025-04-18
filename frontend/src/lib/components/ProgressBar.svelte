@@ -8,8 +8,8 @@
 	let finished = $state(false);
 	const delayHideMs = 1000;
 
-    // Counts from 0 seconds to {time} seconds, which makes the bar update
-    // When full, hides and signals for the AppCore to move to voting screen
+	// Counts from 0 seconds to {time} seconds, which makes the bar update
+	// When full, hides and signals for the AppCore to move to voting screen
 	onMount(() => {
 		const increment = 1;
 		const interval = setInterval(() => {
@@ -19,9 +19,9 @@
 				clearInterval(interval);
 				setTimeout(() => {
 					finished = true;
-                    if (onVoteStart) {
-                        onVoteStart()
-                    }
+					if (onVoteStart) {
+						onVoteStart();
+					}
 				}, delayHideMs);
 			}
 		}, 1000);
@@ -30,5 +30,12 @@
 </script>
 
 {#if !finished}
-<ProgressBar min={0} max={time} value={timePassed}  height="h-4" meter="bg-blue-600" track="bg-gray-400"/>
+	<ProgressBar
+		min={0}
+		max={time}
+		value={timePassed}
+		height="h-4"
+		meter="bg-blue-600"
+		track="bg-gray-400"
+	/>
 {/if}

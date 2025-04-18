@@ -10,8 +10,8 @@
 		Welcome to fairmocracy {$currentUser.name} !
 	</p>
 
-    <!-- IDK just trying something :D maybe we can give everyone a random avatar -->
-	<UserAvatar userName={$currentUser.name} party={$currentUser.party}  />
+	<!-- IDK just trying something :D maybe we can give everyone a random avatar -->
+	<UserAvatar userName={$currentUser.name} party={$currentUser.party} />
 
 	<p>Please wait a moment, voting will start soon.</p>
 
