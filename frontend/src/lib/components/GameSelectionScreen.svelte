@@ -2,14 +2,13 @@
     import { PUBLIC_BACKEND_URL } from "$env/static/public";
 	import { setUserData } from "$lib/stores/userData.svelte.js";
 
-let backendUrl = PUBLIC_BACKEND_URL;
 let gameCode = $state('');
 let error = $state('');
 const { onSelect } = $props();
 
 const onsubmit = (e) => {
     e.preventDefault();
-    fetch(`${PUBLIC_BACKEND_URL}/join/?game_hash=${gameCode}`).then((res) => {
+    fetch(`${PUBLIC_BACKEND_URL}/join?game_hash=${gameCode}`).then((res) => {
         if (res.ok) {
             res.json().then(respJson => {setUserData({game: respJson})
             onSelect();
