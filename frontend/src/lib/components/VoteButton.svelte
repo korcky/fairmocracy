@@ -3,11 +3,7 @@
 	import type { ToastSettings } from '@skeletonlabs/skeleton';
 	let { onVoteGiven, buttonText } = $props();
 	let bgColor =
-		buttonText === 'YES'
-			? 'bg-green-500'
-			: buttonText === 'NO'
-				? 'bg-red-500'
-				: 'bg-gray-500';
+		buttonText === 'YES' ? 'bg-green-500' : buttonText === 'NO' ? 'bg-red-500' : 'bg-gray-500';
 	let answer = buttonText;
 
 	const toastStore = getToastStore();
@@ -16,8 +12,7 @@
 		const t: ToastSettings = {
 			message: `Voted: ${answer} !`,
 			timeout: 10000,
-			background: bgColor,
-			
+			background: bgColor
 		};
 		if (onVoteGiven) {
 			onVoteGiven();

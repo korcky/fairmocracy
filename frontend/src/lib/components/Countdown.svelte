@@ -3,16 +3,16 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 
-	// Have fun reading this, will comment later :D 
+	// Have fun reading this, will comment later :D
 
 	let { countdownTime, countdownMessage, finishedMessage } = $props();
 	countdownTime = Number(countdownTime) || 60;
 	let timePassed = $state(100);
 	let timeRemaining = $state(countdownTime);
 	let finished = $state(false);
-    let showFinishedMessage = $state(false);
+	let showFinishedMessage = $state(false);
 	const delayHideMs = 1000;
-    const delayMessageMs = 2000;
+	const delayMessageMs = 2000;
 
 	onMount(() => {
 		const increment = 100 / countdownTime;
@@ -26,7 +26,7 @@
 				setTimeout(() => {
 					finished = true;
 				}, delayHideMs);
-                setTimeout(() => {
+				setTimeout(() => {
 					showFinishedMessage = true;
 				}, delayMessageMs);
 			}
@@ -38,7 +38,7 @@
 
 {#if !finished}
 	<div transition:fade>
-		<p class="text-lg mb-4">{countdownMessage}</p>
+		<p class="mb-4 text-lg">{countdownMessage}</p>
 		<ProgressRadial value={timePassed} width="w-64" stroke="60" font="100"
 			>{timeRemaining}</ProgressRadial
 		>
