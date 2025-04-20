@@ -9,49 +9,33 @@
 	import GameSelectionScreen from '$lib/components/GameSelectionScreen.svelte';
 	import RegisterScreen from './RegisterScreen.svelte';
 	import { currentUser } from '$lib/stores/userData.svelte.js';
-	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import { gameState, initGameStateSSE, loadParties } from '$lib/stores/gameData.svelte.js';
 
-	const gameState = writable({});
 	const currentScreen = writable('select');
+	let loadedGameId = null;
 
 	onMount(() => {
-		const evtSource = new EventSource(`${PUBLIC_BACKEND_URL}/sse/game-state`);
-		evtSource.onmessage = (event) => {
-			console.log('Received SSE event:', event.data);
-			try {
-				const data = JSON.parse(event.data);
-				gameState.set(data);
-			} catch (e) {
-				console.error('Failed to parse SSE event as JSON:', event.data, e);
-			}
-		};
-		evtSource.onerror = (error) => {
-			console.error('EventSource error:', error);
-		};
-		return () => {
-			evtSource.close();
-		};
-	});
+		initGameStateSSE();
 
-	derived([currentUser, gameState], ([$currentUser, $gameState]) => {
-		let cs = 'select';
-		if ($currentUser.game) {
-			if ($currentUser.name) {
-				if ($currentUser.affiliations[$currentUser.game.current_round]) {
-					cs = 'welcome';
-				} else {
-					cs = 'registerToVote';
-				}
-			} else {
-				cs = 'register';
+		gameState.subscribe(($game) => {
+			if ($game.id && $game.id !== loadedGameId) {
+				loadedGameId = $game.id;
+				loadParties(loadedGameId);
 			}
-		}
-		if ($currentUser.game && $gameState && $gameState.status === 'started') {
-			cs = 'vote';
-		}
-		return cs;
-	}).subscribe((value) => {
-		currentScreen.set(value);
+		});
+
+		derived([currentUser, gameState], ([$user, $game]) => {
+			let cs = 'select';
+			if ($user.game) {
+				if (!$user.name) cs = 'register';
+				else if (!$user.affiliations[$user.game.current_round]) cs = 'registerToVote';
+				else if ($game.status === 'started') cs = 'vote';
+				else cs = 'welcome';
+			}
+			return cs;
+		}).subscribe((value) => {
+			currentScreen.set(value);
+		});
 	});
 
 	const handleSelect = () => currentScreen.set('register');
@@ -63,7 +47,7 @@
 </script>
 
 <h1>Debug: Game State</h1>
-<pre>{JSON.stringify($gameState, null, 2)}</pre>
+<pre>Debug gameState: {JSON.stringify($gameState, null, 2)}</pre>
 
 {#if $currentScreen === 'select'}
 	<GameSelectionScreen {gameState} onSelect={handleSelect} />
