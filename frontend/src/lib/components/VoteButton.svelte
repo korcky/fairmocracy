@@ -1,23 +1,59 @@
 <script lang="ts">
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import type { ToastSettings } from '@skeletonlabs/skeleton';
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import { currentUser } from '$lib/stores/userData.svelte.js';
+	import { gameState } from '$lib/stores/gameData.svelte.js';
+
 	let { onVoteGiven, buttonText } = $props();
-	let bgColor =
-		buttonText === 'YES' ? 'bg-green-500' : buttonText === 'NO' ? 'bg-red-500' : 'bg-gray-500';
-	let answer = buttonText;
+	let bgColor = $derived(
+		buttonText === 'YES' ? 'bg-green-500' : buttonText === 'NO' ? 'bg-red-500' : 'bg-gray-500'
+	);
+	let answer = $derived(buttonText);
 
 	const toastStore = getToastStore();
 
-	function vote() {
+	async function vote() {
+		const user = $currentUser;
+		const state = $gameState;
+		console.log('About to cast vote on event:', state.current_voting_event_id);
+
+		const aff = user.affiliations[state.current_round];
+		if (!aff) {
+			console.error('No affiliation for this round');
+			return;
+		}
+
+		const payload = {
+			voter_id: user.userId,
+			voting_event_id: state.current_voting_event_id,
+			affiliation_id: aff.id,
+			value: answer // "YES" | "NO" | "ABSTAIN"
+		};
+
+		try {
+			const res = await fetch(`${PUBLIC_BACKEND_URL}/v1/voting/cast_vote`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+
+			if (res.ok) {
+				console.log('Vote cast succeeded', { payload, status: res.status });
+			} else {
+				console.error('Vote cast failed:', await res.text());
+			}
+		} catch (err) {
+			console.error('Network error casting vote:', err);
+		}
+
 		const t: ToastSettings = {
-			message: `Voted: ${answer} !`,
+			message: `Voted: ${answer}!`,
 			timeout: 10000,
 			background: bgColor
 		};
-		if (onVoteGiven) {
-			onVoteGiven();
-		}
 		toastStore.trigger(t);
+		onVoteGiven?.();
 	}
 </script>
 
