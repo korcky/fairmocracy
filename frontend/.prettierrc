@@ -5,11 +5,18 @@
 	"printWidth": 100,
 	"plugins": ["prettier-plugin-svelte", "prettier-plugin-tailwindcss"],
 	"overrides": [
-		{
-			"files": "*.svelte",
-			"options": {
-				"parser": "svelte"
-			}
+	  {
+		"files": "**/*.svelte.js",
+		"options": {
+		  "parser": "babel"
 		}
+	  },
+	  {
+		"files": "**/*.svelte",
+		"options": {
+		  "parser": "svelte"
+		}
+	  }
 	]
-}
+  }
+  

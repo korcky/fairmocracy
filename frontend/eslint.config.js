@@ -7,7 +7,6 @@ import globals from 'globals';
 import { fileURLToPath } from 'node:url';
 const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
-/** @type {import('eslint').Linter.Config[]} */
 export default [
 	includeIgnoreFile(gitignorePath),
 	js.configs.recommended,
@@ -26,13 +25,11 @@ export default [
 		files: ['**/*.svelte', '**/*.svelte.js'],
 		languageOptions: {
 			parserOptions: {
-				// Provide your Svelte configuration so eslint-plugin-svelte can adjust its behavior accordingly
 				svelteConfig
+			},
+			globals: {
+				$state: 'readonly'
 			}
-		},
-		// Declare $state as a global variable to prevent no-undef errors
-		globals: {
-			$state: 'readonly'
 		}
 	}
 ];
