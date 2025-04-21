@@ -30,7 +30,8 @@ class SQLEngine(AbstractEngine):
                     id=voter.id,
                     name=voter.name,
                     game_id=voter.game_id,
-                    party_id=voter.party_id,
+                    # party_id=voter.party_id,
+                    extra_info=voter.extra_info,
                 )
             raise NoDataFoundError
     
@@ -57,6 +58,8 @@ class SQLEngine(AbstractEngine):
                 return api_models.Party(
                     id=party.id,
                     name=party.name,
+                    extra_info=party.extra_info,
+                    round_id=party.round_id,
                 )
             raise NoDataFoundError
     
@@ -73,6 +76,7 @@ class SQLEngine(AbstractEngine):
                     api_models.Party(
                         id=party.id,
                         name=party.name,
+                        extra_info=party.extra_info,
                         round_id=party.round_id,
                     )
                     for party in parties
@@ -104,6 +108,8 @@ class SQLEngine(AbstractEngine):
                     hash=game.hash,
                     name=game.name,
                     current_round_id=game.current_round_id,
+                    current_voting_event_id=game.current_voting_event_id,
+                    status=game.status,
                 )
             raise NoDataFoundError
     
@@ -120,6 +126,8 @@ class SQLEngine(AbstractEngine):
                     hash=game.hash,
                     name=game.name,
                     current_round_id=game.current_round_id,
+                    current_voting_event_id=game.current_voting_event_id,
+                    status=game.status,
                 )
             raise NoDataFoundError
     
@@ -155,27 +163,35 @@ class SQLEngine(AbstractEngine):
                     content=event.content,
                     voting_system=event.voting_system,
                     result=event.result,
+                    configuration=event.configuration,
+                    extra_info=event.extra_info,
+                    round_id=event.round_id,
                 )
             raise NoDataFoundError
     
     def update_voting_event(
         self, voting_event_id: int, voting_result: VotingResult, extra_info: dict | None = None
     ) -> None:
-        voting_event = self.get_voting_event(voting_event_id=voting_event_id)
         with Session(self.engine) as session:
-            voting_event.result = voting_result
+            event = session.exec(
+                select(sql_models.VotingEvent).where(
+                    sql_models.VotingEvent.id == voting_event_id
+                )
+            ).first()
+            event.result = voting_result
             if extra_info:
-                voting_event.extra_info = extra_info
-            session.add(voting_event)
+                event.extra_info = extra_info
+            session.add(event)
             session.commit()
 
 
-    def cast_vote(self, vote: api_models.Vote) -> None:
+    def cast_vote(self, vote: api_models.Vote, extra_info: dict | None = None) -> None:
         with Session(self.engine) as session:
             vote = sql_models.Vote(
                 value=vote.value,
                 voter_id=vote.voter_id,
                 voting_event_id=vote.voting_event_id,
+                extra_info=extra_info or {},
             )
             session.add(vote)
             session.commit()
@@ -195,6 +211,7 @@ class SQLEngine(AbstractEngine):
                         voter_id=vote.voter_id,
                         voting_event_id=vote.voting_event_id,
                         created_at=vote.created_at,
+                        extra_info=vote.extra_info,
                     )
                     for vote in votes
                 ]
@@ -214,6 +231,6 @@ class SQLEngine(AbstractEngine):
                     name=game.name,
                     current_round_id=game.current_round_id,
                     current_voting_event_id=game.current_voting_event_id,
-                    status=game.status
+                    status=game.status,
                 )
             raise NoDataFoundError

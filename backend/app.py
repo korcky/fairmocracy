@@ -51,7 +51,7 @@ def broadcast_game_state(f):
         engine = get_db_engine()
         response = await f(*args, **kwargs)
         game = engine.get_active_game()
-        state = game.state
+        state = json.dumps(game.state)
         print("Broadcasting game state:", state)
         await connection_manager.broadcast(state)
         return response
