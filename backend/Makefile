@@ -22,5 +22,5 @@ setup: ## Setupping latest version of the production environment
 	@pip install -r requirements.txt
 
 .PHONY: run
-run:
+run: ## Run backend
 	@fastapi dev app.py
