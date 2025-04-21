@@ -6,7 +6,13 @@
 	"plugins": ["prettier-plugin-svelte", "prettier-plugin-tailwindcss"],
 	"overrides": [
 		{
-			"files": "*.svelte",
+			"files": "**/*.svelte.js",
+			"options": {
+				"parser": "babel"
+			}
+		},
+		{
+			"files": "**/*.svelte",
 			"options": {
 				"parser": "svelte"
 			}

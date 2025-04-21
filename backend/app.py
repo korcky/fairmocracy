@@ -52,25 +52,9 @@ def broadcast_game_state(f):
         response = await f(*args, **kwargs)
         game = engine.get_active_game()
         state = game.state
-        print("Broadcasting game state:", state)
         await connection_manager.broadcast(state)
         return response
     return wrapper
-
-
-"""
-Decorator to broadcast game state changes to all connected clients using SSE
-"""
-#def broadcast_game_state(f):
-#    @wraps(f)
-#    async def wrapper(*args, **kwargs):
-#        connection_manager = SSEConnectionManager()
-#        engine = get_db_engine()
-#        game = engine.get_active_game()
-#        retval = await f(*args, **kwargs)
-#        await connection_manager.broadcast(game.get_state())
-#        return retval
-#    return wrapper
 
 
 @app.on_event("startup")
