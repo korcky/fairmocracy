@@ -51,7 +51,7 @@ def broadcast_game_state(f):
         engine = get_db_engine()
         response = await f(*args, **kwargs)
         game = engine.get_active_game()
-        state = json.dumps(game.state)
+        state = game.state
         print("Broadcasting game state:", state)
         await connection_manager.broadcast(state)
         return response
@@ -196,7 +196,7 @@ async def conclude_voting(voting_event_id: int, db_engine: AbstractEngine = Depe
         # TODO: work with side effects
         # extra_info=... 
     )
-    return Response(status_code=HTTPStatus.OK, content={"voting_event_result": result})
+    return Response(status_code=HTTPStatus.OK, content=json.dumps({"voting_event_result": result}))
 
 @common_router.api_route("/sse/game-state", methods=["GET", "POST"])
 async def stream_game_state():
