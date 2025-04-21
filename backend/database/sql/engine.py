@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from sqlmodel import SQLModel, Session, select
 
 from api import models as api_models
+from api.voting_systems import VotingResult
 from database.abstract_engine import AbstractEngine, NoDataFoundError
 from database.sql import models as sql_models
 
@@ -156,6 +157,18 @@ class SQLEngine(AbstractEngine):
                     result=event.result,
                 )
             raise NoDataFoundError
+    
+    def update_voting_event(
+        self, voting_event_id: int, voting_result: VotingResult, extra_info: dict | None = None
+    ) -> None:
+        voting_event = self.get_voting_event(voting_event_id=voting_event_id)
+        with Session(self.engine) as session:
+            voting_event.result = voting_result
+            if extra_info:
+                voting_event.extra_info = extra_info
+            session.add(voting_event)
+            session.commit()
+
 
     def cast_vote(self, vote: api_models.Vote) -> None:
         with Session(self.engine) as session:

@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
+from api.voting_systems import VotingResult
 from api.models import Affiliation, Voter, VotingEvent, Vote, Party, Game, Round
 
 
@@ -51,6 +52,12 @@ class AbstractEngine(metaclass=ABCMeta):
     @abstractmethod
     def get_voting_event(self, voting_event_id: int) -> VotingEvent:
         """Return VotingEvent based on its ID"""
+        pass
+
+    @abstractmethod
+    def update_voting_event(
+        self, voting_event_id: int, voting_result: VotingResult, extra_info: dict | None = None
+    ) -> None:
         pass
 
     @abstractmethod
