@@ -57,7 +57,7 @@ def broadcast_game_state(f):
         engine = get_db_engine()
         response = await f(*args, **kwargs)
         game = engine.get_active_game()
-        state = game.get_state()
+        state = game.state
         print("Broadcasting game state:", state)
         await connection_manager.broadcast(state)
         return response
@@ -134,7 +134,7 @@ async def get_current_state(game_id: int, db_engine: AbstractEngine = Depends(ge
     game = db_engine.get_game(game_id=game_id)
     if not game:
         return Response(status_code=HTTPStatus.BAD_REQUEST)
-    return game.get_state()
+    return game.state
 
 @game_router.post(
     "/cast_vote",
