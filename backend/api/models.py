@@ -3,10 +3,7 @@ import string
 from datetime import datetime, UTC
 from enum import StrEnum
 
-
 from pydantic import BaseModel, ConfigDict, Field
-
-# add __pydantic_extra__: dict[str, int] = Field(init=False) to validate extra fields
 
 
 class VotingSystem(StrEnum):
@@ -47,7 +44,8 @@ class Game(BaseModel):
     current_voting_event_id: int | None = Field(default=None, foreign_key="voting_event.id")
     status : GameStatus = Field(default=GameStatus.WAITING)
 
-    def get_state(self):
+    @property
+    def state(self) -> dict:
         return {
             "id": self.id,
             "hash": self.hash,
@@ -56,8 +54,6 @@ class Game(BaseModel):
             "current_voting_event_id": self.current_voting_event_id,
             "status": self.status,
         }
-
-    model_config = ConfigDict(extra='allow')
 
 
 
@@ -75,9 +71,9 @@ class Voter(BaseModel):
 
     id: int | None = None
     name: str
-    game_id: int
+    extra_info: dict = Field(default_factory=dict)
 
-    model_config = ConfigDict(extra='allow')
+    game_id: int
 
  
 class Round(BaseModel):
@@ -100,10 +96,9 @@ class Party(BaseModel):
     """
     id: int | None = None
     name: str
+    extra_info: dict = Field(default_factory=dict)
 
     round_id: int
-    
-    model_config = ConfigDict(extra='allow')
 
 
 class Affiliation(BaseModel):
@@ -138,10 +133,10 @@ class VotingEvent(BaseModel):
     content: str
     voting_system: VotingSystem
     result: str | None = Field(default=None)
+    configuration: dict = Field(default_factory=dict)
+    extra_info: dict = Field(default_factory=dict)
 
     round_id: int
-    
-    model_config = ConfigDict(extra='allow')
 
 
 class Vote(BaseModel):
@@ -158,8 +153,7 @@ class Vote(BaseModel):
     id: int | None = Field(default=None)
     value: VoteValue
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    extra_info: dict = Field(default_factory=dict)
 
     voter_id: int
     voting_event_id: int
-    
-    model_config = ConfigDict(extra='allow')

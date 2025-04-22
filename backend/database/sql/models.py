@@ -1,9 +1,9 @@
 import random
 import string
-
 from datetime import datetime, UTC
 
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, JSON, Column
+
 
 class Game(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -19,6 +19,7 @@ class Game(SQLModel, table=True):
 class Voter(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field()
+    extra_info: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
     game_id: int = Field(foreign_key="game.id")
     game: "Game" = Relationship(back_populates="voters")
@@ -39,6 +40,7 @@ class Round(SQLModel, table=True):
 class Party(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field()
+    extra_info: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
     round_id: int = Field(foreign_key="round.id")
     round: "Round" = Relationship(back_populates="parties")
@@ -62,6 +64,8 @@ class VotingEvent(SQLModel, table=True):
     content: str = Field()
     voting_system: str = Field()
     result: str | None = Field(default=None)
+    configuration: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    extra_info: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
     round_id: int = Field(foreign_key="round.id")
     round: "Round" = Relationship(back_populates="voting_events")
@@ -73,6 +77,7 @@ class Vote(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     value: str = Field()
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    extra_info: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
     voter_id: int = Field(foreign_key="voter.id")
     voter: "Voter" = Relationship(back_populates="votes")
