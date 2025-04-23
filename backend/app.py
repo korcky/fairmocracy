@@ -60,7 +60,7 @@ def broadcast_game_state(f):
 @app.on_event("startup")
 def on_startup():
     get_db_engine().startup_initialization()
-    dummy_data.initialize()
+    dummy_data.initialize(number_of_voters = 0)
 
 @app.on_event("startup")
 async def startup_event():
@@ -105,6 +105,37 @@ async def get_current_state(game_id: int, db_engine: AbstractEngine = Depends(ge
 )
 @broadcast_game_state
 async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engine)):
+    # TODO probably some more checks ...
+    voting_event = db_engine.get_voting_event(vote.voting_event_id)
+    round = db_engine.get_round(voting_event.round_id)
+    game = db_engine.get_game(round.game_id)
+    if not game:
+        raise ValueError("Game not found for the given voting event ID")
+    # check that the voting event is active
+    if not game.status == GameStatus.STARTED:
+        raise ValueError("Game is not started")
+    if not game.current_voting_event_id == vote.voting_event_id:
+        raise ValueError("Voting event is not active")
+    votes = db_engine.get_votes(vote.voting_event_id)
+    # check that the voter hasn't voted in this event yet
+    if any(lambda v : v.voter_id == vote.voter_id for v in votes):
+        raise ValueError("Voter has already voted in this event")
+    # if this will be the last vote,
+    # set current_voting_event_id (if there are more voting events left in the round)
+    # or set current_round_id and status to waiting (if there are more rounds left)
+    # or set status to ended (if there are no more voting events or rounds left)
+    if len(votes) == game.n_voters - 1:
+        try:
+            print("Last voter, starting next event!")
+            db_engine.start_next_event(game.id)
+        except:
+            try:
+                print("No next event, starting next round!")
+                db_engine.start_next_round(game.id)
+            except:
+                print("No next round, ending game!")
+                db_engine.update_game_status(game.id, GameStatus.ENDED)
+
     db_engine.cast_vote(vote)
     return Response(status_code=HTTPStatus.NO_CONTENT)
 
@@ -120,6 +151,13 @@ app.include_router(game_router, prefix="/v1/voting")
 )
 async def read_parties_by_game(game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)) -> list[Party]:
     return db_engine.get_parties(game_id=game_id)
+
+@common_router.get(
+    "/game/{game_id}",
+    response_model=Party,
+)
+async def read_game(game_id: int) -> Game:
+    return db_engine.get_game(game_id)
 
 
 @common_router.get(
@@ -154,7 +192,21 @@ async def register_user(user: Voter, db_engine: AbstractEngine = Depends(get_db_
 )
 @broadcast_game_state
 async def register_to_vote(affiliation: Affiliation, db_engine: AbstractEngine = Depends(get_db_engine)) -> Affiliation:
-    # TODO: accept juat party_id and add check for round
+    voter = db_engine.get_voter(affiliation.voter_id)
+    game = db_engine.get_game(voter.game_id)
+    round = db_engine.get_round(affiliation.round_id)
+    if not round:
+        raise ValueError("Round not found")
+    n_affiliations = len(db_engine.get_affiliations_for_round(affiliation.round_id))
+    n_players = len(db_engine.get_voters(voter.game_id))
+    # if the number of affiliations for this round is equal to the number of players in the game, set the game state as started
+    # and set the current_voting_event_id to the id of the first voting event of the round (we will assume they are ordered by PK)
+    if n_affiliations == n_players - 1:
+        db_engine.update_game_status(game.id, GameStatus.STARTED)
+        if not game.current_round_id:
+            db_engine.start_next_round(game.id)
+        if not game.current_voting_event_id:
+            db_engine.start_next_event(game.id)
     return db_engine.add_affiliation(affiliation=affiliation)
 
 
@@ -185,5 +237,11 @@ async def conclude_voting(voting_event_id: int, db_engine: AbstractEngine = Depe
 @common_router.api_route("/sse/game-state", methods=["GET", "POST"])
 async def stream_game_state():
     return StreamingResponse(connection_manager.connect(), media_type="text/event-stream")
+
+# for testing only; remove when not needed
+@common_router.api_route("/broadcast")
+@broadcast_game_state
+async def broadcast():
+    ...
 
 app.include_router(common_router)

@@ -30,11 +30,29 @@ class SQLEngine(AbstractEngine):
                     id=voter.id,
                     name=voter.name,
                     game_id=voter.game_id,
-                    # party_id=voter.party_id,
                     extra_info=voter.extra_info,
                 )
             raise NoDataFoundError
     
+    def get_voters(self, game_id: int) -> list[api_models.Voter]:
+        with Session(self.engine) as session:
+            voters = session.exec(
+                select(sql_models.Voter).where(
+                    sql_models.Voter.game_id == game_id
+                )
+            ).all()
+            if voters:
+                return [
+                    api_models.Voter(
+                        id=voter.id,
+                        name=voter.name,
+                        game_id=voter.game_id,
+                        extra_info=voter.extra_info,
+                    )
+                    for voter in voters
+                ]
+            raise NoDataFoundError
+
     def add_voter(self, voter: api_models.Voter) -> api_models.Voter:
         with Session(self.engine) as session:
             sql_voter = sql_models.Voter(
@@ -88,6 +106,7 @@ class SQLEngine(AbstractEngine):
             sql_affiliation = sql_models.Affiliation(
                 voter_id=affiliation.voter_id,
                 party_id=affiliation.party_id,
+                round_id=affiliation.round_id,
             )
             session.add(sql_affiliation)
             session.commit()
@@ -120,17 +139,84 @@ class SQLEngine(AbstractEngine):
                     sql_models.Game.hash == game_hash
                 )
             ).first()
-            if game:
-                return api_models.Game(
-                    id=game.id,
-                    hash=game.hash,
-                    name=game.name,
-                    current_round_id=game.current_round_id,
-                    current_voting_event_id=game.current_voting_event_id,
-                    status=game.status,
-                )
-            raise NoDataFoundError
+            if not game:
+                print("raising error")
+                raise NoDataFoundError
+
+            return api_models.Game(
+                id=game.id,
+                hash=game.hash,
+                name=game.name,
+                current_round_id=game.current_round_id,
+                current_voting_event_id=game.current_voting_event_id,
+                status=game.status,
+            )
     
+    def update_game_status(self, game_id: int, status: api_models.GameStatus) -> None:
+        with Session(self.engine) as session:
+            game = session.exec(
+                select(sql_models.Game).where(
+                    sql_models.Game.id == game_id
+                )
+            ).first()
+            if not game:
+                raise NoDataFoundError
+            game.status = status
+            session.add(game)
+            session.commit()
+
+    def start_next_round(self,game_id: int) -> None:
+        with Session(self.engine) as session:
+            game = session.exec(
+                select(sql_models.Game).where(
+                    sql_models.Game.id == game_id
+                )
+            ).first()
+            if not game:
+                raise NoDataFoundError
+            rounds = self.get_rounds(game.id)
+            rounds.sort(key=lambda r: r.id)
+            print("ROUNDS ", rounds)
+            # check if there are more rounds left
+            current_round_index = next(i for i,r in enumerate(rounds) if r.id == game.current_round_id)
+            if current_round_index < len(rounds) - 1:
+                game.current_round_id = rounds[current_round_index + 1].id
+                game.current_voting_event_id = None
+                game.status = api_models.GameStatus.WAITING
+                session.add(game)
+                session.commit()
+            else:
+                raise Exception("No more rounds left")
+
+    def start_next_event(self,game_id: int) -> None:
+        with Session(self.engine) as session:
+            game = session.exec(
+                select(sql_models.Game).where(
+                    sql_models.Game.id == game_id
+                )
+            ).first()
+            if not game:
+                raise NoDataFoundError
+            # check if there are more voting events left
+            voting_events = session.exec(
+                select(sql_models.VotingEvent).where(
+                    sql_models.VotingEvent.round_id == game.current_round_id
+                )
+            ).all()
+            voting_events.sort(key=lambda event : event.id)
+            if not game.current_voting_event_id:
+                game.current_voting_event_id = voting_events[0].id
+                session.add(game)
+                session.commit()
+                return
+            current_voting_event_index = next(i for i,v in enumerate(voting_events) if v.id == game.current_voting_event_id)
+            if current_voting_event_index < len(voting_events) - 1:
+                game.current_voting_event_id = voting_events[current_voting_event_index + 1].id
+                session.add(game)
+                session.commit()
+            else:
+                raise Exception("No more voting events left")
+
     def get_rounds(self, game_id: int) -> list[api_models.Round]:
         with Session(self.engine) as session:
             rounds = session.exec(
@@ -148,6 +234,21 @@ class SQLEngine(AbstractEngine):
                     for _round in rounds
                 ]
             raise Exception
+
+    def get_round(self, round_id: int) -> list[api_models.Round]:
+        with Session(self.engine) as session:
+            round = session.exec(
+                select(sql_models.Round).where(
+                    sql_models.Round.id == round_id
+                )
+            ).first()
+            if round:
+                return api_models.Round(
+                    id=round.id,
+                    round_number=round.round_number,
+                    game_id=round.game_id,
+                )
+            raise NoDataFoundError
 
     def get_voting_event(self, voting_event_id: int) -> api_models.VotingEvent:
         with Session(self.engine) as session:
@@ -187,13 +288,13 @@ class SQLEngine(AbstractEngine):
 
     def cast_vote(self, vote: api_models.Vote, extra_info: dict | None = None) -> None:
         with Session(self.engine) as session:
-            vote = sql_models.Vote(
+            sql_vote = sql_models.Vote(
                 value=vote.value,
                 voter_id=vote.voter_id,
                 voting_event_id=vote.voting_event_id,
-                extra_info=extra_info or {},
+                extra_info=extra_info,
             )
-            session.add(vote)
+            session.add(sql_vote)
             session.commit()
     
     def get_votes(self, voting_event_id: int) -> list[api_models.Vote]:
@@ -203,8 +304,7 @@ class SQLEngine(AbstractEngine):
                     sql_models.Vote.voting_event_id == voting_event_id
                 )
             ).all()
-            if votes:
-                return [
+            return [
                     api_models.Vote(
                         id=vote.id,
                         value=vote.value,
@@ -215,6 +315,24 @@ class SQLEngine(AbstractEngine):
                     )
                     for vote in votes
                 ]
+
+    def get_vote(self, voting_event_id, voter_id):
+        with Session(self.engine) as session:
+            vote = session.exec(
+                select(sql_models.Vote).where(
+                    sql_models.Vote.voting_event_id == voting_event_id,
+                    sql_models.Vote.voter_id == voter_id,
+                )
+            ).first()
+            if vote:
+                return api_models.Vote(
+                    id=vote.id,
+                    value=vote.value,
+                    voter_id=vote.voter_id,
+                    voting_event_id=vote.voting_event_id,
+                    created_at=vote.created_at,
+                    extra_info=vote.extra_info,
+                )
             raise NoDataFoundError
 
     def get_active_game(self):
@@ -224,6 +342,11 @@ class SQLEngine(AbstractEngine):
                     sql_models.Game.status != api_models.GameStatus.ENDED
                 )
             ).first()
+            if not game:
+                # return latest game
+                game = session.exec(
+                    select(sql_models.Game).order_by(sql_models.Game.id.desc())
+                ).first()
             if game:
                 return api_models.Game(
                     id=game.id,
@@ -234,3 +357,19 @@ class SQLEngine(AbstractEngine):
                     status=game.status,
                 )
             raise NoDataFoundError
+
+    def get_affiliations_for_round(self, round_id: int) -> list[api_models.Affiliation]:
+        with Session(self.engine) as session:
+            affiliations = session.exec(
+                select(sql_models.Affiliation).where(sql_models.Affiliation.round_id == round_id)
+            )
+            return [
+                api_models.Affiliation(
+                    id=affiliation.id,
+                    voter_id=affiliation.voter_id,
+                    party_id=affiliation.party_id,
+                    round_id=affiliation.round_id,
+                )
+                for affiliation in affiliations
+            ]
+

@@ -6,7 +6,7 @@ export const currentUser = writable(
 		name: '',
 		game: null,
 		userId: null,
-		affiliations: [],
+		affiliations: {},
 		rounds: []
 	}
 );

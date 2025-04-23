@@ -13,6 +13,8 @@ class Game(SQLModel, table=True):
     current_voting_event_id: int | None = Field(default=None)
     rounds: list["Round"] = Relationship(back_populates="game")
     voters: list["Voter"] = Relationship(back_populates="game")
+    # Desired number of voters: after this amount of people have joined the game, the game will be started
+    n_voters: int = Field()
     status: str = Field()
 
 
@@ -35,6 +37,7 @@ class Round(SQLModel, table=True):
     game: "Game" = Relationship(back_populates="rounds")
     voting_events: list["VotingEvent"] = Relationship(back_populates="round")
     parties: list["Party"] = Relationship(back_populates="round")
+    affiliations: list["Affiliation"] = Relationship(back_populates="round")
 
 
 class Party(SQLModel, table=True):
@@ -55,6 +58,8 @@ class Affiliation(SQLModel, table=True):
     voter: "Voter" = Relationship(back_populates="affiliations")
     party_id: int = Field(foreign_key="party.id")
     party: "Party" = Relationship(back_populates="affiliations")
+    round_id: int = Field(foreign_key="round.id")
+    round: "Round" = Relationship(back_populates="affiliations")
 
 
 class VotingEvent(SQLModel, table=True):
