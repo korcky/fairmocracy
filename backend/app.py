@@ -2,6 +2,7 @@ import asyncio
 import json
 import signal
 import logging
+import io
 from http import HTTPStatus
 from typing import Annotated
 
@@ -11,6 +12,7 @@ import functools
 from fastapi import APIRouter, Depends, FastAPI, Cookie
 from fastapi.responses import Response, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import UploadFile, File
 
 import dummy_data
 from api.voting_systems import AbstractVotingSystem, VotingResult, MajorityVotingSystem
@@ -18,6 +20,7 @@ from api.models import Voter, Vote, VotingEvent, Party, Game, Round, Affiliation
 from api.sse_connection_manager import SSEConnectionManager
 from database import AbstractEngine, SQLEngine
 from db_config import get_db_engine
+from configurations.config_reader import VotingConfigReader
 
 app = FastAPI()
 
@@ -157,6 +160,16 @@ async def register_to_vote(affiliation: Affiliation, db_engine: AbstractEngine =
     # TODO: accept juat party_id and add check for round
     return db_engine.add_affiliation(affiliation=affiliation)
 
+@common_router.post("/upload_config")
+async def upload_config(file: UploadFile = File(...), db_engine: AbstractEngine = Depends(get_db_engine)):
+    try:
+        contents = await file.read()
+        reader = VotingConfigReader(io.StringIO(contents.decode('utf-8')))
+
+        return JSONResponse(content={"message": "File uploaded and processed successfully!"})
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=400)
 
 # TODO: get voting event through Dependency?
 @common_router.post(
