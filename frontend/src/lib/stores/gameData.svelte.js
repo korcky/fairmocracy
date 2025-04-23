@@ -25,7 +25,13 @@ export const gameState = writable({
 	name: null,
 	status: null,
 	current_round: null,
-	current_voting_event_id: null
+	current_voting_event_id: null,
+	voting_event: {
+		title: null,
+		content: null,
+		extra_info: null,
+		votes: [],
+	}
 	// Whatever else we need
 });
 
