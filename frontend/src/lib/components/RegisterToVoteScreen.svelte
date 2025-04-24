@@ -4,7 +4,7 @@
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { parties } from '$lib/stores/gameData.svelte.js';
 
-	let { onRegistration, gameState } = $props();
+	let { gameState } = $props();
 	let party = $state('');
 	let errors = $state({});
 	let { game, name, userId, affiliations } = $currentUser;
@@ -28,18 +28,18 @@
 				},
 				body: JSON.stringify({
 					party_id: parseInt(party),
-					round_id: rounds[gameState.current_round]?.id,
+					round_id: $gameState.current_round_id,
 					voter_id: userId
 				})
 			}).then((res) => {
 				if (res.ok) {
+					console.log("setting aff")
 					setUserData({
 						name,
 						game,
 						userId,
-						affiliations: { ...affiliations, [gameState.current_round]: { party: validParty } }
+						affiliations: { ...affiliations, [$gameState.current_round_id]: { party: validParty } }
 					});
-					onRegistration();
 				} else {
 					errors = { name: ['Registration failed'] };
 				}
@@ -54,7 +54,7 @@
 </script>
 
 <p class="p-4 text-center text-lg">
-	Round {gameState.current_round}: select the party you represent.
+	Round {$gameState.current_round_id}: select the party you represent.
 </p>
 
 <div class="form-container">

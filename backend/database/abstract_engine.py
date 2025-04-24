@@ -46,6 +46,18 @@ class AbstractEngine(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def update_game_status(game: Game) -> None:
+        pass
+
+    @abstractmethod
+    def start_next_round(game: Game) -> None:
+        pass
+
+    @abstractmethod
+    def start_next_event(game: Game) -> None:
+        pass
+
+    @abstractmethod
     def get_rounds(self, game_id: int) -> list[Round]:
         pass
 
@@ -72,3 +84,8 @@ class AbstractEngine(metaclass=ABCMeta):
     @abstractmethod
     def get_active_game() -> Game:
         pass
+
+    @abstractmethod
+    def get_affiliations_for_round(self, round_id: int):
+        pass
+    

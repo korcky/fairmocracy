@@ -24,7 +24,7 @@ export const gameState = writable({
 	hash: null,
 	name: null,
 	status: null,
-	current_round: null,
+	current_round_id: null,
 	current_voting_event_id: null
 	// Whatever else we need
 });

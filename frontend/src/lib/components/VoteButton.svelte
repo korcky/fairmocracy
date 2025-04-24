@@ -5,7 +5,7 @@
 	import { currentUser } from '$lib/stores/userData.svelte.js';
 	import { gameState } from '$lib/stores/gameData.svelte.js';
 
-	let { onVoteGiven, buttonText } = $props();
+	let { buttonText } = $props();
 	let bgColor = $derived(
 		buttonText === 'YES' ? 'bg-green-500' : buttonText === 'NO' ? 'bg-red-500' : 'bg-gray-500'
 	);
@@ -18,7 +18,7 @@
 		const state = $gameState;
 		console.log('About to cast vote on event:', state.current_voting_event_id);
 
-		const aff = user.affiliations[state.current_round];
+		const aff = user.affiliations[state.current_round_id];
 		if (!aff) {
 			console.error('No affiliation for this round');
 			return;
@@ -53,7 +53,6 @@
 			background: bgColor
 		};
 		toastStore.trigger(t);
-		onVoteGiven?.();
 	}
 </script>
 

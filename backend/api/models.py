@@ -40,8 +40,9 @@ class Game(BaseModel):
     id: int | None = Field(default=None, primary_key=True)
     hash: str = Field(default = ''.join(random.choices(string.ascii_lowercase, k=4)))
     name: str = Field()
-    current_round_id: int = Field(default=0)
+    current_round_id: int | None = Field(default=None, foreign_key="round.id")
     current_voting_event_id: int | None = Field(default=None, foreign_key="voting_event.id")
+    n_voters: int = Field(default=1)
     status : GameStatus = Field(default=GameStatus.WAITING)
 
     @property
@@ -115,6 +116,7 @@ class Affiliation(BaseModel):
 
     voter_id: int
     party_id: int
+    round_id: int
 
 
 class VotingEvent(BaseModel):
