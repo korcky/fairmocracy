@@ -164,10 +164,10 @@ async def register_to_vote(affiliation: Affiliation, db_engine: AbstractEngine =
 async def upload_config(file: UploadFile = File(...), db_engine: AbstractEngine = Depends(get_db_engine)):
     try:
         contents = await file.read()
-        reader = VotingConfigReader(io.StringIO(contents.decode('utf-8')))
+        file_like = io.StringIO(contents.decode('utf-8'))
+        reader = VotingConfigReader(file_like)
 
         return JSONResponse(content={"message": "File uploaded and processed successfully!"})
-
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
 

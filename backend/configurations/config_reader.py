@@ -1,6 +1,6 @@
 import pandas as pd
 from datetime import datetime
-from ..models import Game, VotingEvent, Party, Round
+from api.models import Game, VotingEvent, Party, Round
 
 
 class VotingConfigReader:
