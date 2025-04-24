@@ -107,6 +107,15 @@ async def get_current_state(game_id: int, db_engine: AbstractEngine = Depends(ge
     if voting_event:
         votes = db_engine.get_votes(voting_event_id=voting_event.voting_event_id)
 
+    voting_event = None
+    if game.current_round_id:
+        voting_event = db_engine.get_voting_event(round_id=game.current_voting_event_id)
+     
+ 
+    votes = []
+    if voting_event:
+        votes = db_engine.get_votes(voting_event_id=voting_event.voting_event_id)
+ 
     return game.state, {"voting_event": {"title": voting_event.title if voting_event else None, "content": voting_event.content if voting_event else None, "extra_info": voting_event.extra_info if voting_event else None, "votes": votes} if voting_event else None,}
 
 @game_router.post(
