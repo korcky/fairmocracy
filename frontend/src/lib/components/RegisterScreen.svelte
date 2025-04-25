@@ -1,48 +1,62 @@
 <script>
 	import { z } from 'zod';
-	import { setUserData, currentUser } from '$lib/stores/userData.svelte.js';
+	import { setUserData } from '$lib/stores/userData.svelte.js';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import { gameState } from '$lib/stores/gameData.svelte.js';
 
-	let { onRegistration } = $props();
 	let name = $state('');
 	let errors = $state({});
-	let { game } = $currentUser;
 
 	let formValidator = z.object({
 		name: z.string().nonempty('Name is required')
 	});
 
-	const register = () => {
+	async function register() {
 		errors = {};
 		try {
-			const validatedData = formValidator.parse({ name });
-			const { name: validName } = validatedData;
+			const { name: validName } = formValidator.parse({ name });
 
-			fetch(`${PUBLIC_BACKEND_URL}/register`, {
+			const res = await fetch(`${PUBLIC_BACKEND_URL}/register`, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ name: validName, game_id: game.id })
-			}).then((res) => {
-				if (res.ok) {
-					res.json().then((respJson) => {
-						setUserData({ game, name: respJson.name, userId: respJson.id });
-						onRegistration();
-					});
-				} else {
-					errors = { name: ['Registration failed'] };
-				}
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: validName,
+					game_id: $gameState.id
+				})
+			});
+
+			const raw = await res.text();
+
+			if (!res.ok) {
+				errors = { name: ['Registration failed'] };
+				return;
+			}
+
+			let voter;
+			try {
+				voter = JSON.parse(raw);
+			} catch (e) {
+				errors = { name: ['Invalid JSON returned'] };
+				return;
+			}
+
+			setUserData({
+				name: voter.name,
+				userId: voter.id,
+				gameId: voter.game_id,
+				affiliations: {},
+				rounds: [],
+				votes: {}
 			});
 		} catch (err) {
 			console.error(err);
 			if (err instanceof z.ZodError) {
 				errors = err.flatten().fieldErrors;
+			} else {
+				errors = { name: ['Something went wrong'] };
 			}
 		}
-		// If the submitted data was fine by our validation standards, signal AppCore
-		// to move into waiting room view
-	};
+	}
 </script>
 
 <p class="p-4 text-center text-lg">Please enter your name to join the game.</p>

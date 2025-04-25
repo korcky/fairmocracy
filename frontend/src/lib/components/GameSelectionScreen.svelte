@@ -1,11 +1,10 @@
 <script>
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { setUserData } from '$lib/stores/userData.svelte.js';
-	import { loadParties } from '$lib/stores/gameData.svelte.js';
+	import { loadParties, gameState } from '$lib/stores/gameData.svelte.js';
 
 	let gameCode = $state('');
 	let error = $state('');
-	const { onSelect } = $props();
 
 	const onsubmit = (e) => {
 		e.preventDefault();
@@ -21,9 +20,9 @@
 			})
 			.then((gameObj) => {
 				if (!gameObj) return;
-				setUserData({ game: gameObj });
+				setUserData({ gameId: gameObj.id });
+				gameState.set(gameObj)
 				loadParties(gameObj.id);
-				onSelect();
 			})
 			.catch((err) => {
 				console.error(err);

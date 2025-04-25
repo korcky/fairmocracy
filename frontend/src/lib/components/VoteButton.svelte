@@ -2,7 +2,7 @@
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import type { ToastSettings } from '@skeletonlabs/skeleton';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
-	import { currentUser } from '$lib/stores/userData.svelte.js';
+	import { currentUser, setUserData } from '$lib/stores/userData.svelte.js';
 	import { gameState } from '$lib/stores/gameData.svelte.js';
 
 	let { buttonText } = $props();
@@ -40,6 +40,12 @@
 
 			if (res.ok) {
 				console.log('Vote cast succeeded', { payload, status: res.status });
+				setUserData({
+					votes: {
+						...user.votes,
+						[state.current_voting_event_id]: payload
+					}
+				});
 			} else {
 				console.error('Vote cast failed:', await res.text());
 			}
