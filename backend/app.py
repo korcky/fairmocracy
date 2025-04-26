@@ -161,13 +161,24 @@ async def register_to_vote(affiliation: Affiliation, db_engine: AbstractEngine =
     return db_engine.add_affiliation(affiliation=affiliation)
 
 @common_router.post("/upload_config")
+@broadcast_game_state
 async def upload_config(file: UploadFile = File(...), db_engine: AbstractEngine = Depends(get_db_engine)):
     try:
         contents = await file.read()
         file_like = io.StringIO(contents.decode('utf-8'))
         reader = VotingConfigReader(file_like)
+        game = reader.get_game()
 
-        return JSONResponse(content={"message": "File uploaded and processed successfully!"})
+        print(f"Game Created: {game.id}, Status: {game.status}, Name: {game.name}")
+        
+        await connection_manager.broadcast(game.status)
+
+        return JSONResponse(content={
+                "message": "Game created successfully!",
+                "game_code": game.hash,  
+                "game_id": game.id,
+                "game_name": game.name
+            })
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
 

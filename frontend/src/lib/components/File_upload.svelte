@@ -33,6 +33,7 @@
 				if (response.ok) {
 					const result = await response.json();
 					console.log(result);
+          alert(`Game created successfully!\nGame Code: ${result.game_code}\nGame ID: ${result.game_id}\nGame Name: ${result.game_name}`);
 					goto('/');
 				} else {
 					const errorText = await response.text();
