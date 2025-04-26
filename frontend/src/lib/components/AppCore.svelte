@@ -35,7 +35,7 @@
 </script>
 
 <button
-	class="btn btn-primary"
+	class="btn-primary btn"
 	on:click={() => {
 		debug.update((d) => !d);
 	}}
