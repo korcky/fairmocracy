@@ -154,10 +154,13 @@ async def read_parties_by_game(game_id: int, db_engine: AbstractEngine = Depends
 
 @common_router.get(
     "/game/{game_id}",
-    response_model=Party,
+    response_model=Game,
 )
-async def read_game(game_id: int) -> Game:
-    return db_engine.get_game(game_id)
+async def read_game(
+    game_id: int,
+    db_engine: AbstractEngine = Depends(get_db_engine),
+) -> Game:
+    return db_engine.get_game(game_id=game_id)
 
 
 @common_router.get(
