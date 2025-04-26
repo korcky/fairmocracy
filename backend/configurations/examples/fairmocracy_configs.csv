@@ -1,13 +1,13 @@
-Rules;Parties;Fractions;Questions
-FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question1
-FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question2
-FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question3
-FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question4
-FI;a, b, c;0.3, 0.3;question1
-FI;a, b, c;0.3, 0.3;question2
-FI;a, b, c;0.3, 0.3;question3
-FI;a, b, c;0.3, 0.3;question4
-USA;a, b;0.4;question1
-USA;a, b;0.4;question2
-USA;a, b;0.4;question3
-USA;a, b;0.4;question4
+Voters;Rules;Parties;Fractions;Questions
+1;FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question1
+1;FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question2
+1;FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question3
+1;FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question4
+1;FI;a, b, c;0.3, 0.3;question1
+1;FI;a, b, c;0.3, 0.3;question2
+1;FI;a, b, c;0.3, 0.3;question3
+1;FI;a, b, c;0.3, 0.3;question4
+1;USA;a, b;0.4;question1
+1;USA;a, b;0.4;question2
+1;USA;a, b;0.4;question3
+1;USA;a, b;0.4;question4
