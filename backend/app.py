@@ -102,6 +102,8 @@ async def get_current_state(game_id: int, db_engine: AbstractEngine = Depends(ge
 @game_router.post(
     "/cast_vote",
     tags=["voting"],
+    status_code=HTTPStatus.OK,
+    response_model=dict,
 )
 @broadcast_game_state
 async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engine)):
@@ -137,7 +139,15 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
                 db_engine.update_game_status(game.id, GameStatus.ENDED)
 
     db_engine.cast_vote(vote)
-    return Response(status_code=HTTPStatus.NO_CONTENT)
+    return JSONResponse(
+        status_code=HTTPStatus.OK,
+        content={
+            "voter_id": vote.voter_id,
+            "round_id": voting_event.round_id,
+            "voting_event_id": vote.voting_event_id,
+            "value": vote.value,
+        },
+    )
 
 
 app.include_router(user_router, prefix="/v1/user")
