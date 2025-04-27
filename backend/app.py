@@ -195,28 +195,9 @@ app.include_router(game_router, prefix="/v1/voting")
 async def read_parties_by_game(
     game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ) -> list[Party]:
-    # DEBUG: log raw SQLModel query here
-    from sqlmodel import select
-    from database.sql import models as m
-    from sqlmodel import Session
-
-    with Session(get_db_engine().engine) as sess:
-        stmt = (
-            select(m.Party)
-            .join(m.Round, m.Party.round_id == m.Round.id)
-            .where(m.Round.game_id == game_id)
-        )
-        parties_list = sess.exec(stmt).all()
-        print(
-            f"[DEBUG] Queried in endpoint, found {len(parties_list)} parties:",
-            parties_list,
-        )
-
-    # now call your real engine
     try:
         return db_engine.get_parties(game_id=game_id)
     except NoDataFoundError:
-        print(f"[DEBUG] NoDataFoundError for game {game_id}")
         return []
 
 
