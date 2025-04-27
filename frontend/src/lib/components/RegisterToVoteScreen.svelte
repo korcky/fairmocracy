@@ -1,56 +1,61 @@
 <script>
 	import { z } from 'zod';
 	import { setUserData, currentUser } from '$lib/stores/userData.svelte.js';
+	import { gameState, parties } from '$lib/stores/gameData.svelte.js';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
-	import { parties } from '$lib/stores/gameData.svelte.js';
 
-	let { gameState } = $props();
-	let party = $state('');
+	let selectedParty = $state('');
 	let errors = $state({});
-	let { game, name, userId, affiliations } = $currentUser;
-	let rounds = $derived($currentUser.rounds);
-
-	console.log(gameState);
 
 	let formValidator = z.object({
 		party: z.string().nonempty('Select your party')
 	});
 
-	const register = () => {
+	async function registerToVote() {
 		errors = {};
+
+		const user = $currentUser;
+		const gstate = $gameState;
+
+		// validate selection
 		try {
-			const validatedData = formValidator.parse({ party });
-			const { party: validParty } = validatedData;
-			fetch(`${PUBLIC_BACKEND_URL}/register_to_vote`, {
+			formValidator.parse({ party: selectedParty });
+		} catch (err) {
+			errors = err.flatten().fieldErrors;
+			return;
+		}
+
+		try {
+			const res = await fetch(`${PUBLIC_BACKEND_URL}/register_to_vote`, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					party_id: parseInt(party),
-					round_id: $gameState.current_round_id,
-					voter_id: userId
+					voter_id: user.userId,
+					round_id: gstate.current_round_id,
+					party_id: parseInt(selectedParty, 10)
 				})
-			}).then((res) => {
-				if (res.ok) {
-					console.log("setting aff")
-					setUserData({
-						name,
-						game,
-						userId,
-						affiliations: { ...affiliations, [$gameState.current_round_id]: { party: validParty } }
-					});
-				} else {
-					errors = { name: ['Registration failed'] };
+			});
+
+			if (!res.ok) {
+				console.error('[RegisterToVote] failed:', res.status, await res.text());
+				errors = { api: ['Registration failed'] };
+				return;
+			}
+
+			const affiliation = await res.json();
+			console.log('[RegisterToVote] affiliation:', affiliation);
+
+			setUserData({
+				affiliations: {
+					...user.affiliations,
+					[affiliation.round_id]: affiliation.id
 				}
 			});
-		} catch (err) {
-			console.error(err);
-			if (err instanceof z.ZodError) {
-				errors = err.flatten().fieldErrors;
-			}
+		} catch (e) {
+			console.error('[RegisterToVote] error', e);
+			errors = { api: ['Something went wrong'] };
 		}
-	};
+	}
 </script>
 
 <p class="p-4 text-center text-lg">
@@ -64,15 +69,13 @@
 			<select
 				id="party"
 				name="party"
-				onchange={(e) => (party = e.target.value)}
+				onchange={(e) => (selectedParty = e.target.value)}
 				class="select variant-form-material"
 			>
 				<option value="" disabled selected>Select your party</option>
-				{#if game}
-					{#each $parties as p}
-						<option value={p.id}>{p.name}</option>
-					{/each}
-				{/if}
+				{#each $parties as p}
+					<option value={p.id}>{p.name}</option>
+				{/each}
 			</select>
 			{#if errors.party}
 				<p class="mt-1 text-sm text-red-500">Select your party</p>
@@ -82,7 +85,9 @@
 			{/if}
 		</div>
 	</div>
-	<button onclick={register} type="button" class="variant-filled btn bg-blue-500">Enter</button>
+	<button onclick={registerToVote} type="button" class="variant-filled btn bg-blue-500"
+		>Enter</button
+	>
 </div>
 
 <style>
