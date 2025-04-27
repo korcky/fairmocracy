@@ -39,7 +39,7 @@
 			});
 
 			if (res.ok) {
-				console.log('Vote cast succeeded', { payload, status: res.status });
+				console.log('Vote cast succeeded:', res.json());
 				setUserData({
 					votes: {
 						...user.votes,

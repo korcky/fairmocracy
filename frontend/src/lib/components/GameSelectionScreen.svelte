@@ -21,7 +21,7 @@
 			.then((gameObj) => {
 				if (!gameObj) return;
 				setUserData({ gameId: gameObj.id });
-				gameState.set(gameObj)
+				gameState.set(gameObj);
 				loadParties(gameObj.id);
 			})
 			.catch((err) => {

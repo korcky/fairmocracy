@@ -10,7 +10,6 @@ let _lastEventId = null;
 export const currentScreen = derived(
 	[currentUser, gameState, hasSeenInfo],
 	([$user, $game, seen], set) => {
-
 		// Hasn't joined a game
 		if (!$user.gameId) {
 			hasSeenInfo.set(false);
@@ -18,7 +17,7 @@ export const currentScreen = derived(
 			return set('select');
 		}
 
-        // Hasn't given name
+		// Hasn't given name
 		if (!$user.userId) {
 			hasSeenInfo.set(false);
 			_lastEventId = null;
