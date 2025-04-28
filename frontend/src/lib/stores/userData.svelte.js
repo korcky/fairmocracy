@@ -21,3 +21,14 @@ currentUser.subscribe((value) => {
 export function setUserData(updates) {
 	currentUser.update((u) => ({ ...u, ...updates }));
 }
+
+export function clearUserData() {
+	currentUser.set({
+		name: '',
+		gameId: null,
+		userId: null,
+		affiliations: {},
+		rounds: [],
+		votes: {}
+	});
+}

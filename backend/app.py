@@ -2,6 +2,7 @@ import asyncio
 import json
 import signal
 import logging
+import io
 from http import HTTPStatus
 from typing import Annotated
 
@@ -11,6 +12,7 @@ import functools
 from fastapi import APIRouter, Depends, FastAPI, Cookie
 from fastapi.responses import Response, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import UploadFile, File
 
 import dummy_data
 from api.voting_systems import AbstractVotingSystem, VotingResult, MajorityVotingSystem
@@ -28,6 +30,7 @@ from api.models import (
 from api.sse_connection_manager import SSEConnectionManager
 from database import AbstractEngine, SQLEngine
 from db_config import get_db_engine
+from configurations.config_reader import VotingConfigReader
 
 app = FastAPI()
 
@@ -253,6 +256,27 @@ async def register_to_vote(
             db_engine.start_next_event(game.id)
     return db_engine.add_affiliation(affiliation=affiliation)
 
+@common_router.post("/upload_config")
+@broadcast_game_state
+async def upload_config(file: UploadFile = File(...), db_engine: AbstractEngine = Depends(get_db_engine)):
+    try:
+        contents = await file.read()
+        file_like = io.StringIO(contents.decode('utf-8'))
+        reader = VotingConfigReader(file_like)
+        game = reader.get_game()
+
+        print(f"Game Created: {game.id}, Status: {game.status}, Name: {game.name}")
+        
+        await connection_manager.broadcast(game.status)
+
+        return JSONResponse(content={
+                "message": "Game created successfully!",
+                "game_code": game.hash,  
+                "game_id": game.id,
+                "game_name": game.name
+            })
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=400)
 
 # TODO: get voting event through Dependency?
 @common_router.post(
