@@ -4,16 +4,16 @@ import signal
 import logging
 import io
 from http import HTTPStatus
+from sqlite3 import IntegrityError as DBIntegrityError
+from sqlalchemy.exc import IntegrityError as SAIntegrityError
+from pandas.errors import EmptyDataError, ParserError
 from typing import Annotated
-
 import functools
-
-
 from fastapi import APIRouter, Depends, FastAPI, Cookie
 from fastapi.responses import Response, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import UploadFile, File
-
+from database.abstract_engine import NoDataFoundError
 import dummy_data
 from api.voting_systems import AbstractVotingSystem, VotingResult, MajorityVotingSystem
 from api.models import (
@@ -61,7 +61,12 @@ def broadcast_game_state(f):
     async def wrapper(*args, **kwargs):
         engine = get_db_engine()
         response = await f(*args, **kwargs)
-        game = engine.get_active_game()
+        game_id = (
+            kwargs.get("game_id")
+            or getattr(response, "game_id", None)
+            or engine.get_active_game().id
+        )
+        game = engine.get_game(game_id=game_id)
         state = game.state
         await connection_manager.broadcast(state)
         return response
@@ -71,8 +76,13 @@ def broadcast_game_state(f):
 
 @app.on_event("startup")
 def on_startup():
-    get_db_engine().startup_initialization()
-    dummy_data.initialize(number_of_voters=0)
+    engine = get_db_engine()
+    engine.startup_initialization()
+
+    try:
+        engine.get_active_game()
+    except NoDataFoundError:
+        dummy_data.initialize(number_of_voters=0)
 
 
 @app.on_event("startup")
@@ -121,7 +131,6 @@ async def get_current_state(
     "/cast_vote",
     tags=["voting"],
     status_code=HTTPStatus.OK,
-    response_model=dict,
 )
 @broadcast_game_state
 async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engine)):
@@ -163,15 +172,15 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
         f"value={vote.value}"
     )
     db_engine.cast_vote(vote)
-    return JSONResponse(
-        status_code=HTTPStatus.OK,
-        content={
-            "voter_id": vote.voter_id,
-            "round_id": voting_event.round_id,
-            "voting_event_id": vote.voting_event_id,
-            "value": vote.value,
-        },
-    )
+    content = {
+        "voter_id": vote.voter_id,
+        "round_id": voting_event.round_id,
+        "voting_event_id": vote.voting_event_id,
+        "value": vote.value,
+    }
+    resp = JSONResponse(status_code=HTTPStatus.OK, content=content)
+    resp.game_id = game.id
+    return resp
 
 
 app.include_router(user_router, prefix="/v1/user")
@@ -186,7 +195,10 @@ app.include_router(game_router, prefix="/v1/voting")
 async def read_parties_by_game(
     game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ) -> list[Party]:
-    return db_engine.get_parties(game_id=game_id)
+    try:
+        return db_engine.get_parties(game_id=game_id)
+    except NoDataFoundError:
+        return []
 
 
 @common_router.get(
@@ -230,8 +242,17 @@ async def get_game_by_hash(
 @broadcast_game_state
 async def register_user(
     user: Voter, db_engine: AbstractEngine = Depends(get_db_engine)
-) -> Voter:
-    return db_engine.add_voter(voter=user)
+) -> JSONResponse:
+    voter = db_engine.add_voter(voter=user)
+    payload = {
+        "id": voter.id,
+        "name": voter.name,
+        "game_id": voter.game_id,
+        "extra_info": voter.extra_info,
+    }
+    resp = JSONResponse(status_code=HTTPStatus.OK, content=payload)
+    resp.game_id = voter.game_id
+    return resp
 
 
 @common_router.post("/register_to_vote", response_model=Affiliation)
@@ -254,7 +275,113 @@ async def register_to_vote(
             db_engine.start_next_round(game.id)
         if not game.current_voting_event_id:
             db_engine.start_next_event(game.id)
-    return db_engine.add_affiliation(affiliation=affiliation)
+    new_aff = db_engine.add_affiliation(affiliation=affiliation)
+    payload = {
+        "id": new_aff.id,
+        "voter_id": new_aff.voter_id,
+        "party_id": new_aff.party_id,
+        "round_id": new_aff.round_id,
+    }
+    resp = JSONResponse(status_code=HTTPStatus.OK, content=payload)
+    resp.game_id = game.id
+    return resp
+
+
+@common_router.post("/upload_config")
+@broadcast_game_state
+async def upload_config(
+    file: UploadFile = File(...), db_engine: AbstractEngine = Depends(get_db_engine)
+):
+    try:
+        raw_bytes = await file.read()
+        try:
+            csv_text = raw_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            raise ValueError("File must be UTF-8 encoded CSV")
+
+        file_like = io.StringIO(csv_text)
+        reader = VotingConfigReader(file_like)
+        game = reader.get_game()
+
+        resp = JSONResponse(
+            status_code=HTTPStatus.OK,
+            content={
+                "message": "Game created successfully!",
+                "game_code": game.hash,
+                "game_id": game.id,
+                "game_name": game.name,
+            },
+        )
+        resp.game_id = game.id
+        return resp
+
+    ### Database constraint violations ###
+    except SAIntegrityError as e:
+        # The raw DBAPI error is in e.orig
+        msg = str(e.orig).lower()
+
+        if "not null constraint failed: game.n_voters" in msg:
+            detail = "Configuration error: 'number_of_voters' is required."
+        elif "unique constraint failed: game.hash" in msg:
+            detail = "Configuration error: Game code collision—try again."
+        elif "foreign key constraint failed" in msg:
+            detail = "Configuration error: Your CSV references a non-existent entity."
+        else:
+            detail = "Invalid configuration (DB constraint): " + msg
+
+        return JSONResponse(status_code=400, content={"error": detail})
+
+    except DBIntegrityError as e:
+        # Raw sqlite3 error
+        msg = str(e).lower()
+
+        if "not null constraint failed: game.n_voters" in msg:
+            detail = "Configuration error: 'number_of_voters' is required."
+        elif "unique constraint failed: game.hash" in msg:
+            detail = "Configuration error: Game code collision—try again."
+        elif "foreign key constraint failed" in msg:
+            detail = "Configuration error: Your CSV references a non-existent entity."
+        else:
+            detail = "Invalid configuration (SQLite): " + msg
+
+        return JSONResponse(status_code=400, content={"error": detail})
+
+    ### CSV parsing errors ###
+    except EmptyDataError:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "Uploaded CSV is empty or malformed—please provide a valid CSV file."
+            },
+        )
+    except ParserError as e:
+        return JSONResponse(status_code=400, content={"error": f"CSV parse error: {e}"})
+
+    ### Missing columns or bad round indices ###
+    except KeyError as e:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": f"Configuration error: missing required column '{e.args[0]}'."
+            },
+        )
+    except IndexError as e:
+        return JSONResponse(
+            status_code=400, content={"error": f"Configuration error: {e}"}
+        )
+
+    ### Any other validation or type errors ###
+    except ValueError as e:
+        return JSONResponse(
+            status_code=400, content={"error": f"Configuration error: {e}"}
+        )
+
+    ### Fallback for all other unexpected errors ###
+    except Exception as e:
+        print("Unexpected error in upload_config")
+        return JSONResponse(
+            status_code=500, content={"error": "Unexpected error: " + str(e)}
+        )
 
 @common_router.post("/upload_config")
 @broadcast_game_state
@@ -282,7 +409,7 @@ async def upload_config(file: UploadFile = File(...), db_engine: AbstractEngine 
 @common_router.post(
     "/voting_event/{voting_event_id}/conclude",
 )
-@broadcast_game_state
+# @broadcast_game_state
 async def conclude_voting(
     voting_event_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ):
