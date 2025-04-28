@@ -15,7 +15,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import UploadFile, File
 from database.abstract_engine import NoDataFoundError
 import dummy_data
-from api.voting_systems import AbstractVotingSystem, VotingResult, MajorityVotingSystem
+from api.voting_systems import (
+    AbstractVotingSystem,
+    VotingResult,
+    MajorityVotingSystem,
+    MajorityWithRewardSystem,
+)
 from api.models import (
     Voter,
     Vote,
@@ -47,6 +52,7 @@ common_router = APIRouter()
 # the calculation of the voting event result
 AVAILABLE_VOTING_SYSTEM_CLS = {
     VotingSystem.MAJORITY: MajorityVotingSystem,
+    VotingSystem.MAJORITY_WITH_REWARD: MajorityWithRewardSystem,
 }
 
 connection_manager = SSEConnectionManager()
@@ -422,12 +428,16 @@ async def conclude_voting(
         return Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
     voting_system = voting_system_cls(**voting_event.configuration)
     votes = db_engine.get_votes(voting_event_id=voting_event_id)
-    result, side_effects = voting_system.voting_result(votes=votes)
+    result, voters, parties = voting_system.voting_result(
+        voting_event=voting_event,
+        votes=votes,
+        voters=db_engine.get_voters(voter.game_id),
+        parties=db_engine.get_parties(game_id=game_id),
+    )
+    # TODO: update voters and poarties
     db_engine.update_voting_event(
         voting_event_id=voting_event_id,
         voting_result=result,
-        # TODO: work with side effects
-        # extra_info=...
     )
     return Response(
         status_code=HTTPStatus.OK, content=json.dumps({"voting_event_result": result})
