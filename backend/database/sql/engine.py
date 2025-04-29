@@ -28,7 +28,7 @@ class SQLEngine(AbstractEngine):
                     id=voter.id,
                     name=voter.name,
                     game_id=voter.game_id,
-                    extra_info=voter.extra_info,
+                    extra_info=voter.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                 )
             raise NoDataFoundError
 
@@ -43,7 +43,7 @@ class SQLEngine(AbstractEngine):
                         id=voter.id,
                         name=voter.name,
                         game_id=voter.game_id,
-                        extra_info=voter.extra_info,
+                        extra_info=voter.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                     )
                     for voter in voters
                 ]
@@ -70,7 +70,7 @@ class SQLEngine(AbstractEngine):
                 return api_models.Party(
                     id=party.id,
                     name=party.name,
-                    extra_info=party.extra_info,
+                    extra_info=party.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                     round_id=party.round_id,
                 )
             raise NoDataFoundError
@@ -91,7 +91,7 @@ class SQLEngine(AbstractEngine):
                     api_models.Party(
                         id=party.id,
                         name=party.name,
-                        extra_info=party.extra_info,
+                        extra_info=party.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                         round_id=party.round_id,
                     )
                     for party in parties
@@ -272,7 +272,7 @@ class SQLEngine(AbstractEngine):
                     voting_system=event.voting_system,
                     result=event.result,
                     configuration=event.configuration,
-                    extra_info=event.extra_info,
+                    extra_info=event.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                     round_id=event.round_id,
                 )
             raise NoDataFoundError
@@ -291,7 +291,7 @@ class SQLEngine(AbstractEngine):
             ).first()
             event.result = voting_result
             if extra_info:
-                event.extra_info = extra_info
+                event.extra_info = extra_info 
             session.add(event)
             session.commit()
 
@@ -320,7 +320,7 @@ class SQLEngine(AbstractEngine):
                     voter_id=vote.voter_id,
                     voting_event_id=vote.voting_event_id,
                     created_at=vote.created_at,
-                    extra_info=vote.extra_info,
+                    extra_info=vote.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                 )
                 for vote in votes
             ]
@@ -340,7 +340,7 @@ class SQLEngine(AbstractEngine):
                     voter_id=vote.voter_id,
                     voting_event_id=vote.voting_event_id,
                     created_at=vote.created_at,
-                    extra_info=vote.extra_info,
+                    extra_info=vote.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                 )
             raise NoDataFoundError
 
