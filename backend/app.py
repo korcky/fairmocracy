@@ -257,24 +257,33 @@ async def register_user(
 @common_router.post("/register_to_vote", response_model=Affiliation)
 @broadcast_game_state
 async def register_to_vote(
-    affiliation: Affiliation, db_engine: AbstractEngine = Depends(get_db_engine)
+    affiliation: Affiliation,
+    db_engine: AbstractEngine = Depends(get_db_engine),
 ) -> Affiliation:
-    voter = db_engine.get_voter(affiliation.voter_id)
-    game = db_engine.get_game(voter.game_id)
-    round = db_engine.get_round(affiliation.round_id)
-    if not round:
-        raise ValueError("Round not found")
-    n_affiliations = len(db_engine.get_affiliations_for_round(affiliation.round_id))
-    n_players = len(db_engine.get_voters(voter.game_id))
-    # if the number of affiliations for this round is equal to the number of players in the game, set the game state as started
-    # and set the current_voting_event_id to the id of the first voting event of the round (we will assume they are ordered by PK)
-    if n_affiliations == n_players - 1:
-        db_engine.update_game_status(game.id, GameStatus.STARTED)
-        if not game.current_round_id:
-            db_engine.start_next_round(game.id)
-        if not game.current_voting_event_id:
-            db_engine.start_next_event(game.id)
+
     new_aff = db_engine.add_affiliation(affiliation=affiliation)
+
+    voter = db_engine.get_voter(new_aff.voter_id)
+    game = db_engine.get_game(voter.game_id)
+    n_players = len(db_engine.get_voters(game.id))
+    n_affiliations = len(db_engine.get_affiliations_for_round(new_aff.round_id))
+
+    if n_players == game.n_voters and n_affiliations == game.n_voters:
+        # player count reached, start the game
+        db_engine.update_game_status(game.id, GameStatus.STARTED)
+
+        try:
+            # check if we can start the next event
+            db_engine.start_next_event(game.id)
+        except Exception:
+            # no next event, try next round and then next event
+            try:
+                db_engine.start_next_round(game.id)
+                db_engine.start_next_event(game.id)
+            except Exception:
+                # no more rounds, end the game
+                db_engine.update_game_status(game.id, GameStatus.ENDED)
+
     payload = {
         "id": new_aff.id,
         "voter_id": new_aff.voter_id,
