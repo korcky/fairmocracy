@@ -1,13 +1,5 @@
 Voters;Rules;Parties;Fractions;Questions
 2;FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question1
 2;FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question2
-2;FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question3
-2;FI;a, b, c, d, e;0.1, 0.4, 0.2, 0.15;question4
 2;FI;a, b, c;0.3, 0.3;question1
 2;FI;a, b, c;0.3, 0.3;question2
-2;FI;a, b, c;0.3, 0.3;question3
-2;FI;a, b, c;0.3, 0.3;question4
-2;USA;a, b;0.4;question1
-2;USA;a, b;0.4;question2
-2;USA;a, b;0.4;question3
-2;USA;a, b;0.4;question4
