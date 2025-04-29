@@ -20,6 +20,10 @@ class AbstractEngine(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def get_voters(self, game_id: int) -> list[Voter]:
+        pass
+
+    @abstractmethod
     def add_voter(self, voter: Voter) -> Voter:
         pass
 

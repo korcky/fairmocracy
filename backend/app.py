@@ -74,6 +74,20 @@ def broadcast_game_state(f):
         )
         game = engine.get_game(game_id=game_id)
         state = game.state
+        if game.current_voting_event_id:
+            voting_event = engine.get_voting_event(game.current_voting_event_id)
+            # Structure for extra_info in VotingEvent:
+            # {
+            #    "voting_system_nam": {
+            #         VotingResult.ACCEPTED: {
+            #             "voters": {voter_id_0: voter_reward_0, ...},
+            #             "parties": {party_id_0: party_reward_0, ...}
+            #         }
+            #         VotingResult.REJECTED: {...},
+            #         ...
+            #     }
+            # }
+            state["extra_info"] = voting_event.extra_info
         await connection_manager.broadcast(state)
         return response
 
@@ -104,19 +118,27 @@ async def startup_event():
     "/{user_id}",
     tags=["user"],
 )
-# @broadcast_game_state
-async def get_user(user_id: str, db_engine: AbstractEngine = Depends(get_db_engine)):
-    return Response(status_code=HTTPStatus.NO_CONTENT)
+async def get_user(user_id: str, db_engine: AbstractEngine = Depends(get_db_engine)) -> Voter:
+    """
+    Structure for extra_info
+    {
+        voting_system_name: {
+            stat_1: value_1,
+            ....
+        }
+    }
+    """
+    return db_engine.get_voter(user_id)
 
 
 @user_router.post(
     "/login",
     tags=["user"],
 )
-@broadcast_game_state
 async def login(
     key: str | None = None, db_engine: AbstractEngine = Depends(get_db_engine)
 ):
+    # Not in use by frontend
     return Response(status_code=HTTPStatus.NO_CONTENT)
 
 
@@ -127,6 +149,7 @@ async def login(
 async def get_current_state(
     game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ):
+    # Not in use by frontend
     game = db_engine.get_game(game_id=game_id)
     if not game:
         return Response(status_code=HTTPStatus.BAD_REQUEST)
@@ -144,6 +167,7 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
     voting_event = db_engine.get_voting_event(vote.voting_event_id)
     round = db_engine.get_round(voting_event.round_id)
     game = db_engine.get_game(round.game_id)
+    n_voters = len(db_engine.get_voters(round.game_id))
     if not game:
         raise ValueError("Game not found for the given voting event ID")
     # check that the voting event is active
@@ -159,7 +183,7 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
     # set current_voting_event_id (if there are more voting events left in the round)
     # or set current_round_id and status to waiting (if there are more rounds left)
     # or set status to ended (if there are no more voting events or rounds left)
-    if len(votes) == game.n_voters - 1:
+    if len(votes) == n_voters - 1:
         try:
             print("Last voter, starting next event!")
             db_engine.start_next_event(game.id)
@@ -178,6 +202,7 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
         f"value={vote.value}"
     )
     db_engine.cast_vote(vote)
+    await conclude_voting(voting_event_id=voting_event.id, db_engine=db_engine)
     content = {
         "voter_id": vote.voter_id,
         "round_id": voting_event.round_id,
@@ -193,7 +218,6 @@ app.include_router(user_router, prefix="/v1/user")
 app.include_router(game_router, prefix="/v1/voting")
 
 
-# TODO refactor stuff below (especially pathes and tags)
 @common_router.get(
     "/game/{game_id}/parties",
     response_model=list[Party],
@@ -201,6 +225,15 @@ app.include_router(game_router, prefix="/v1/voting")
 async def read_parties_by_game(
     game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ) -> list[Party]:
+    """
+    Structure for extra_info
+    {
+        voting_system_name: {
+            stat_1: value_1,
+            ....
+        }
+    }
+    """
     try:
         return db_engine.get_parties(game_id=game_id)
     except NoDataFoundError:
@@ -272,10 +305,10 @@ async def register_to_vote(
     if not round:
         raise ValueError("Round not found")
     n_affiliations = len(db_engine.get_affiliations_for_round(affiliation.round_id))
-    n_players = len(db_engine.get_voters(voter.game_id))
+    n_voters = len(db_engine.get_voters(voter.game_id))
     # if the number of affiliations for this round is equal to the number of players in the game, set the game state as started
     # and set the current_voting_event_id to the id of the first voting event of the round (we will assume they are ordered by PK)
-    if n_affiliations == n_players - 1:
+    if n_affiliations == n_voters - 1:
         db_engine.update_game_status(game.id, GameStatus.STARTED)
         if not game.current_round_id:
             db_engine.start_next_round(game.id)
@@ -389,6 +422,7 @@ async def upload_config(
             status_code=500, content={"error": "Unexpected error: " + str(e)}
         )
 
+
 @common_router.post("/upload_config")
 @broadcast_game_state
 async def upload_config(file: UploadFile = File(...), db_engine: AbstractEngine = Depends(get_db_engine)):
@@ -410,6 +444,16 @@ async def upload_config(file: UploadFile = File(...), db_engine: AbstractEngine 
             })
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
+
+
+@common_router.get(
+    "/voting_event/{voting_event_id}",
+)
+async def conclude_voting(
+    voting_event_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
+):
+    return db_engine.get_voting_event(voting_event_id=voting_event_id)
+
 
 # TODO: get voting event through Dependency?
 @common_router.post(
@@ -434,11 +478,16 @@ async def conclude_voting(
         voters=db_engine.get_voters(voter.game_id),
         parties=db_engine.get_parties(game_id=game_id),
     )
-    # TODO: update voters and poarties
     db_engine.update_voting_event(
         voting_event_id=voting_event_id,
         voting_result=result,
     )
+    if voters:
+        # TODO: Update voters
+        pass
+    if parties:
+        # TODO: Update parties
+        pass
     return Response(
         status_code=HTTPStatus.OK, content=json.dumps({"voting_event_result": result})
     )
