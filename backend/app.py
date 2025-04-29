@@ -145,7 +145,7 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
         raise ValueError("Voting event is not active")
     votes = db_engine.get_votes(vote.voting_event_id)
     # check that the voter hasn't voted in this event yet
-    if any(lambda v: v.voter_id == vote.voter_id for v in votes):
+    if any(v.voter_id == vote.voter_id for v in votes):
         raise ValueError("Voter has already voted in this event")
     # if this will be the last vote,
     # set current_voting_event_id (if there are more voting events left in the round)
