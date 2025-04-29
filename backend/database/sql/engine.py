@@ -126,6 +126,7 @@ class SQLEngine(AbstractEngine):
                     current_round_id=game.current_round_id,
                     current_voting_event_id=game.current_voting_event_id,
                     status=game.status,
+                    n_voters=game.n_voters,
                 )
             raise NoDataFoundError
 
@@ -145,6 +146,7 @@ class SQLEngine(AbstractEngine):
                 current_round_id=game.current_round_id,
                 current_voting_event_id=game.current_voting_event_id,
                 status=game.status,
+                n_voters=game.n_voters,
             )
 
     def update_game_status(self, game_id: int, status: api_models.GameStatus) -> None:
@@ -369,6 +371,7 @@ class SQLEngine(AbstractEngine):
                 current_round_id=game_row.current_round_id,
                 current_voting_event_id=game_row.current_voting_event_id,
                 status=game_row.status,
+                n_voters=game_row.n_voters,
             )
 
     def get_affiliations_for_round(self, round_id: int) -> list[api_models.Affiliation]:
