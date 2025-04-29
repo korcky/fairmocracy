@@ -61,11 +61,9 @@ def broadcast_game_state(f):
     async def wrapper(*args, **kwargs):
         engine = get_db_engine()
         response = await f(*args, **kwargs)
-        game_id = (
-            kwargs.get("game_id")
-            or getattr(response, "game_id", None)
-            or engine.get_active_game().id
-        )
+        game_id = getattr(
+            response, "game_id", None
+        )  # every return object with this decorator MUST have .game_id attribute with this implementation, can be done in a better way in the future
         game = engine.get_game(game_id=game_id)
         state = game.state
         await connection_manager.broadcast(state)
