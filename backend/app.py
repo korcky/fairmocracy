@@ -96,7 +96,6 @@ async def startup_event():
     "/{user_id}",
     tags=["user"],
 )
-# @broadcast_game_state
 async def get_user(user_id: str, db_engine: AbstractEngine = Depends(get_db_engine)):
     return Response(status_code=HTTPStatus.NO_CONTENT)
 
