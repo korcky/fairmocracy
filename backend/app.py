@@ -289,7 +289,8 @@ async def register_to_vote(
 @common_router.post("/upload_config")
 @broadcast_game_state
 async def upload_config(
-    file: UploadFile = File(...), db_engine: AbstractEngine = Depends(get_db_engine)
+    file: UploadFile = File(...),
+    db_engine: AbstractEngine = Depends(get_db_engine),
 ):
     try:
         raw_bytes = await file.read()
