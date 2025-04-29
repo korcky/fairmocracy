@@ -167,7 +167,9 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
         f"Vote received: voter_id={vote.voter_id}, "
         f"round_id={voting_event.round_id}, "
         f"event_id={vote.voting_event_id}, "
-        f"value={vote.value}"
+        f"value={vote.value}, "
+        f"Configured players: {game.n_voters}, "
+        f"Votes so far: {len(votes)+1}"  # +1 since votes is fetched before casting new one
     )
     db_engine.cast_vote(vote)
     content = {
