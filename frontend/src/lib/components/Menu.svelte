@@ -56,7 +56,7 @@
 						<a href="/about" class="text-gray-700 hover:text-blue-500">About</a>
 					</li>
 					<li class="mb-2">
-						<a href="/config" class="text-gray-700 hover:text-blue-500">Upload</a>
+						<a href="/admin" class="text-gray-700 hover:text-blue-500">Admin</a>
 					</li>
 				</ul>
 			</nav>
