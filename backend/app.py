@@ -294,13 +294,9 @@ async def upload_config(
 ):
     try:
         raw_bytes = await file.read()
-        try:
-            csv_text = raw_bytes.decode("utf-8")
-        except UnicodeDecodeError:
-            raise ValueError("File must be UTF-8 encoded CSV")
+        csv_text = raw_bytes.decode("utf-8")
 
-        file_like = io.StringIO(csv_text)
-        reader = VotingConfigReader(file_like)
+        reader = VotingConfigReader(io.StringIO(csv_text))
         game = reader.get_game()
 
         resp = JSONResponse(
@@ -315,72 +311,36 @@ async def upload_config(
         resp.game_id = game.id
         return resp
 
-    ### Database constraint violations ###
     except SAIntegrityError as e:
-        # The raw DBAPI error is in e.orig
+        # handle SQLModel integrity errors…
         msg = str(e.orig).lower()
-
         if "not null constraint failed: game.n_voters" in msg:
             detail = "Configuration error: 'number_of_voters' is required."
-        elif "unique constraint failed: game.hash" in msg:
-            detail = "Configuration error: Game code collision—try again."
         elif "foreign key constraint failed" in msg:
             detail = "Configuration error: Your CSV references a non-existent entity."
         else:
-            detail = "Invalid configuration (DB constraint): " + msg
-
+            detail = f"Invalid configuration (DB): {msg}"
         return JSONResponse(status_code=400, content={"error": detail})
 
     except DBIntegrityError as e:
-        # Raw sqlite3 error
+        # handle raw sqlite3 errors…
         msg = str(e).lower()
-
         if "not null constraint failed: game.n_voters" in msg:
             detail = "Configuration error: 'number_of_voters' is required."
-        elif "unique constraint failed: game.hash" in msg:
-            detail = "Configuration error: Game code collision—try again."
         elif "foreign key constraint failed" in msg:
             detail = "Configuration error: Your CSV references a non-existent entity."
         else:
-            detail = "Invalid configuration (SQLite): " + msg
-
+            detail = f"Invalid configuration (SQLite): {msg}"
         return JSONResponse(status_code=400, content={"error": detail})
 
-    ### CSV parsing errors ###
-    except EmptyDataError:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "Uploaded CSV is empty or malformed—please provide a valid CSV file."
-            },
-        )
-    except ParserError as e:
-        return JSONResponse(status_code=400, content={"error": f"CSV parse error: {e}"})
+    except (EmptyDataError, ParserError, KeyError, IndexError, ValueError) as e:
+        # any CSV / value errors
+        return JSONResponse(status_code=400, content={"error": str(e)})
 
-    ### Missing columns or bad round indices ###
-    except KeyError as e:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": f"Configuration error: missing required column '{e.args[0]}'."
-            },
-        )
-    except IndexError as e:
-        return JSONResponse(
-            status_code=400, content={"error": f"Configuration error: {e}"}
-        )
-
-    ### Any other validation or type errors ###
-    except ValueError as e:
-        return JSONResponse(
-            status_code=400, content={"error": f"Configuration error: {e}"}
-        )
-
-    ### Fallback for all other unexpected errors ###
     except Exception as e:
-        print("Unexpected error in upload_config")
+        # fallback
         return JSONResponse(
-            status_code=500, content={"error": "Unexpected error: " + str(e)}
+            status_code=500, content={"error": f"Unexpected error: {e}"}
         )
 
 @common_router.post("/upload_config")
