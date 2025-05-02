@@ -64,6 +64,10 @@ class VotingConfigReader:
             )
 
         return rounds
+    
+    def _validate_round_number(self, round_number: int):
+        if not (0 <= round_number < len(self.rounds)):
+            raise IndexError(f"Round number {round_number} is out of range. Only {len(self.rounds)} rounds available.")
 
     def get_game(self):
         """Retrieves configured Game object"""
@@ -77,36 +81,39 @@ class VotingConfigReader:
             session.add(game)
             session.flush()  # generate game.id
 
-            sql_rounds = []
-            for idx, rnd in enumerate(self.rounds):
-                r = sql_models.Round(
-                    round_number=idx,
-                    game_id=game.id,
-                    rules=rnd["Rules"]
-                )
-                r.voting_events = [
+            rounds = []
+
+            for rnd in range(len(self.rounds)):
+                voting_events = [
                     sql_models.VotingEvent(
                         title=q,
                         content=q,
                         voting_system="MAJORITY"
                     )
-                    for q in rnd["Questions"]
+                    for q in self.get_questions(rnd)
                 ]
-                r.parties = [sql_models.Party(name=p) for p in rnd["Parties"]]
-                sql_rounds.append(r)
 
-            for r in sql_rounds:
-                session.add(r)
+                parties = [
+                    sql_models.Party(name=party)
+                    for party in self.get_parties(rnd)
+                ]
 
+                round_obj = sql_models.Round(
+                    round_number=rnd,
+                    game_id=game.id,
+                    rules=self.get_rule(rnd),
+                    voting_events=voting_events,
+                    parties=parties
+                )
+
+                rounds.append(round_obj)
+                session.add(round_obj)
+
+            game.rounds = rounds
+            print(f"Total rounds created: {len(rounds)}")  # Log total rounds created
+            game.current_round_id = rounds[0].id
             session.commit()
             session.refresh(game)
-
-            first_round = game.rounds[0]
-            game.current_round_id = first_round.id
-            session.add(game)
-            session.commit()
-            session.refresh(game)
-
         return game
 
     def get_round(self, round_number: int):

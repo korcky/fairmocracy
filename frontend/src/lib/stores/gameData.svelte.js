@@ -3,6 +3,7 @@ import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import { currentUser, clearUserData } from './userData.svelte.js';
 
 export const parties = writable([]);
+export const rounds = writable([]);
 export const gameState = writable({
 	id: null,
 	hash: null,
@@ -24,10 +25,27 @@ export async function loadParties(gameId) {
 		if (!res.ok) throw new Error(`Status ${res.status}`);
 		const data = await res.json();
 		parties.set(data);
+		console.log('Parties loaded:', data);
 	} catch (e) {
 		console.error('Failed to load parties', e);
 	}
 }
+
+export async function loadRounds(gameId) {
+	if (gameId === _lastLoadedGameId) return;
+	_lastLoadedGameId = gameId;
+
+	try {
+		const res = await fetch(`${PUBLIC_BACKEND_URL}/game/${gameId}/rounds`);
+		if (!res.ok) throw new Error(`Status ${res.status}`);
+		const data = await res.json();
+		rounds.set(data);
+		console.log('Rounds loaded:', data);
+	} catch (e) {
+		console.error('Failed to load rounds', e);
+	}
+}
+
 
 export function initGameStateSSE() {
 	if (_evtSource) return;

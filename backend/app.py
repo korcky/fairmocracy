@@ -310,6 +310,7 @@ async def upload_config(
                 "game_code": game.hash,
                 "game_id": game.id,
                 "game_name": game.name,
+                "num": len(reader.get_all_rounds())
             },
         )
         resp.game_id = game.id
@@ -400,7 +401,7 @@ async def upload_config(file: UploadFile = File(...), db_engine: AbstractEngine 
                 "message": "Game created successfully!",
                 "game_code": game.hash,  
                 "game_id": game.id,
-                "game_name": game.name
+                "game_name": game.name,
             })
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
