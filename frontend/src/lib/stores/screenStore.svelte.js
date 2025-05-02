@@ -10,6 +10,13 @@ let _lastEventId = null;
 export const currentScreen = derived(
 	[currentUser, gameState, hasSeenInfo],
 	([$user, $game, seen], set) => {
+		// Admin
+		if ($user.isAdmin) {
+			hasSeenInfo.set(false);
+			_lastEventId = null;
+			return set('admin');
+		}
+
 		// Hasn't joined a game
 		if (!$user.gameId) {
 			hasSeenInfo.set(false);

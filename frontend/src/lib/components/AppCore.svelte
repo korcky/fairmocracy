@@ -4,6 +4,7 @@
 	import { writable } from 'svelte/store';
 
 	// Screen imports
+	import AdminView from './AdminView.svelte';
 	import GameSelectionScreen from '$lib/components/GameSelectionScreen.svelte';
 	import WelcomeScreen from './WelcomeScreen.svelte';
 	import RegisterScreen from './RegisterScreen.svelte';
@@ -56,7 +57,9 @@
 	<pre>Debug currentScreen: {JSON.stringify($currentScreen, null, 2)}</pre>
 {/if}
 
-{#if $currentScreen === 'select'}
+{#if $currentScreen === 'admin'}
+	<AdminView />
+{:else if $currentScreen === 'select'}
 	<GameSelectionScreen />
 {:else if $currentScreen === 'register'}
 	<RegisterScreen />
