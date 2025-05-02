@@ -9,7 +9,16 @@ export const gameState = writable({
 	name: null,
 	status: null,
 	current_round_id: null,
-	current_voting_event_id: null
+	current_voting_event_id: null,
+	current_voting_event: {
+		title: null,
+		content: null,
+		votes: [],
+	},
+	next_voting_event: {
+		title:null,
+		content: null,
+	}
 });
 
 let _lastLoadedGameId = null;

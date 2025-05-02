@@ -3,6 +3,9 @@ import json
 import signal
 import logging
 import io
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from http import HTTPStatus
 from sqlite3 import IntegrityError as DBIntegrityError
 from sqlalchemy.exc import IntegrityError as SAIntegrityError
@@ -31,6 +34,8 @@ from api.sse_connection_manager import SSEConnectionManager
 from database import AbstractEngine, SQLEngine
 from db_config import get_db_engine
 from configurations.config_reader import VotingConfigReader
+from database.sql import models as sql_models
+
 
 app = FastAPI()
 
@@ -124,7 +129,33 @@ async def get_current_state(
     game = db_engine.get_game(game_id=game_id)
     if not game:
         return Response(status_code=HTTPStatus.BAD_REQUEST)
-    return game.state
+    
+    current_voting_event = None
+    if game.current_voting_event_id:
+        current_voting_event = db_engine.get_voting_event(game.current_voting_event_id)
+
+    next_voting_event = db_engine.get_next_voting_event(game_id=game_id)
+    votes = []
+    if current_voting_event:
+        votes = db_engine.get_votes(voting_event_id=current_voting_event.id)
+
+    return {
+        "game": {
+            "id": game.id,
+            "status": game.status,
+            "current_round_id": game.current_round_id,
+            "current_voting_event_id": game.current_voting_event_id,
+        },
+        "current_voting_event": {
+            "title": current_voting_event.title if current_voting_event else None,
+            "content": current_voting_event.content if current_voting_event else None,
+            "votes": [{"voter_id": vote.voter_id, "value": vote.value} for vote in votes],
+        } if current_voting_event else None,
+        "next_voting_event": {
+            "title": next_voting_event.title if next_voting_event else None,
+            "content": next_voting_event.content if next_voting_event else None,
+        }
+    }
 
 
 @game_router.post(
@@ -441,6 +472,31 @@ async def stream_game_state():
     )
 
 
+def get_next_voting_event(self, game_id: int) -> VotingEvent | None:
+    with Session(self.engine) as session:
+        game = session.exec(select(sql_models.Game).where(sql_models.Game.id == game_id)).first()
+        if not game or not game.current_round_id:
+            return None
+
+        current_round = session.exec(
+            select(sql_models.Round).where(sql_models.Round.id == game.current_round_id)
+        ).first()
+
+        if not current_round:
+            return None
+
+        # Find the next voting event in the current round
+        current_voting_event_id = game.current_voting_event_id
+        next_event = session.exec(
+            select(sql_models.VotingEvent)
+            .where(
+                sql_models.VotingEvent.round_id == current_round.id,
+                sql_models.VotingEvent.id > current_voting_event_id,
+            )
+            .order_by(sql_models.VotingEvent.id.asc())
+        ).first()
+
+        return next_event
 # for testing only; remove when not needed
 @common_router.api_route("/broadcast")
 @broadcast_game_state
