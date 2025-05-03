@@ -105,12 +105,10 @@ class VotingConfigReader:
                     voting_events=voting_events,
                     parties=parties
                 )
-
                 rounds.append(round_obj)
                 session.add(round_obj)
 
             game.rounds = rounds
-            print(f"Total rounds created: {len(rounds)}")  # Log total rounds created
             game.current_round_id = rounds[0].id
             session.commit()
             session.refresh(game)

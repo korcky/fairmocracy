@@ -3,6 +3,7 @@
 	import { gameState, parties} from '$lib/stores/gameData.svelte.js';
 	import { currentUser } from '$lib/stores/userData.svelte.js';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	import { onMount } from 'svelte';
 	
 	console.log($parties);
 	let selectedParty = '';
@@ -18,29 +19,23 @@
 	console.log("User party" , affiliationId.party_id);
 	console.log("User party" , selectedParty);
 
-	let totalRounds = 0;
+	let previousId = null;
 	let roundsLeft = 0;
 
-	$: if ($gameState.id) {
-		const gameId = $gameState.id;
-		fetch(`${PUBLIC_BACKEND_URL}/game/${gameId}/rounds`)
-			.then(res => res.json())
-			.then(data => {
-				totalRounds = data.length;
-				roundsLeft = totalRounds;
-				console.log("Loaded total rounds:", totalRounds);
-			})
-			.catch(e => console.error("Failed to load rounds", e));
+	onMount(() => {
+		if ($gameState.id) {
+			const gameId = $gameState.id;
+			fetch(`${PUBLIC_BACKEND_URL}/game/${gameId}/rounds`)
+				.then(res => res.json())
+				.then(data => {
+					const totalRounds = data.length;
+					const currentIndex = data.findIndex(r => r.id === $gameState.current_round_id);
+					roundsLeft = totalRounds - currentIndex - 1;
+					console.log("Round completed, remaining rounds: ", roundsLeft);
+				})
+				.catch(e => console.error("Failed to load rounds", e));
 	}
-	 // Watch for round updates and decrease totalRounds
-	$: if ($gameState.current_round_id !== RoundId) {
-		// Ensure we only update RoundId when the round is truly changing
-		RoundId = $gameState.current_round_id;
-		if (roundsLeft > 0) {
-		roundsLeft -= 1; // Decrease rounds when the current round changes
-		}
-		console.log("Round completed, remaining rounds: ", roundsLeft);
-  	}
+	});
 
 	function proceed() {
 		hasSeenInfo.set(true);
