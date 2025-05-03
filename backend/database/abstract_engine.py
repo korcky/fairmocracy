@@ -28,12 +28,20 @@ class AbstractEngine(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def update_voters(self, voters: list[Voter]):
+        pass
+
+    @abstractmethod
     def get_party(self, party_id: int) -> Party:
         """Return Party based on its ID"""
         pass
 
     @abstractmethod
     def get_parties(self, game_id: int) -> list[Party]:
+        pass
+
+    @abstractmethod
+    def update_parties(self, parties: list[Party]):
         pass
 
     @abstractmethod

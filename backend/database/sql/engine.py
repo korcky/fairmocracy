@@ -60,6 +60,17 @@ class SQLEngine(AbstractEngine):
             session.refresh(sql_voter)
             voter.id = sql_voter.id
             return voter
+        
+    def update_voters(self, voters: list[api_models.Voter]):
+        voters_extra_info = {v.id: v.extra_info for v in voters}
+        with Session(self.engine) as session:
+            # this should be filtered 
+            sql_voters = session.exec(select(sql_models.Voter)).all()
+            for voter in sql_voters:
+                if voter.id in voters_extra_info:
+                    voter.extra_info = voters_extra_info[voter.id]
+                    session.add(voter)
+            session.commit()
 
     def get_party(self, party_id: int) -> api_models.Party:
         with Session(self.engine) as session:
@@ -97,6 +108,17 @@ class SQLEngine(AbstractEngine):
                     for party in parties
                 ]
             raise NoDataFoundError
+    
+    def update_parties(self, parties: list[api_models.Party]):
+        parties_extra_info = {p.id: p.extra_info for v in parties}
+        with Session(self.engine) as session:
+            # this should be filtered 
+            sql_parties = session.exec(select(sql_models.Party)).all()
+            for party in sql_parties:
+                if party.id in parties_extra_info:
+                    party.extra_info = parties_extra_info[party.id]
+                    session.add(party)
+            session.commit()
 
     def add_affiliation(
         self, affiliation: api_models.Affiliation

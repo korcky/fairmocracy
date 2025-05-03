@@ -392,33 +392,10 @@ async def upload_config(
         )
 
 
-@common_router.post("/upload_config")
-@broadcast_game_state
-async def upload_config(file: UploadFile = File(...), db_engine: AbstractEngine = Depends(get_db_engine)):
-    try:
-        contents = await file.read()
-        file_like = io.StringIO(contents.decode('utf-8'))
-        reader = VotingConfigReader(file_like)
-        game = reader.get_game()
-
-        print(f"Game Created: {game.id}, Status: {game.status}, Name: {game.name}")
-        
-        await connection_manager.broadcast(game.status)
-
-        return JSONResponse(content={
-                "message": "Game created successfully!",
-                "game_code": game.hash,  
-                "game_id": game.id,
-                "game_name": game.name
-            })
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=400)
-
-
 @common_router.get(
     "/voting_event/{voting_event_id}",
 )
-async def conclude_voting(
+async def get_voting_event(
     voting_event_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ):
     return db_engine.get_voting_event(voting_event_id=voting_event_id)
@@ -452,11 +429,9 @@ async def conclude_voting(
         voting_result=result,
     )
     if voters:
-        # TODO: Update voters
-        pass
+        db_engine.update_voters(voters)
     if parties:
-        # TODO: Update parties
-        pass
+        db_engine.update_parties(parties)
     return Response(
         status_code=HTTPStatus.OK, content=json.dumps({"voting_event_result": result})
     )
