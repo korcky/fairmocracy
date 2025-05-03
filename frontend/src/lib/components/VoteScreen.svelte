@@ -2,7 +2,7 @@
 	import VoteButton from './VoteButton.svelte';
 </script>
 
-<p class="p-4 text-center text-lg">Do you support this law?</p>
+<p class="p-4 text-center text-lg">Do you support the proposal?</p>
 
 <div class="button-container mx-0 my-auto flex flex-col items-center justify-center gap-2 p-4">
 	<VoteButton buttonText="YES" />
