@@ -13,8 +13,4 @@
 	<UserAvatar userName={$currentUser.name} party={$currentUser.party} />
 
 	<p>Please wait a moment, voting will start soon.</p>
-
-	<button type="button" class="variant-filled-warning btn" onclick={onNewVote}
-		>Demo: Force New Vote</button
-	>
 </div>
