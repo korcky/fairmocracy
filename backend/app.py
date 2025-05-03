@@ -55,12 +55,11 @@ connection_manager = SSEConnectionManager()
 """
 Decorator to broadcast game state changes to all connected clients using SSE
 """
+end_times: dict[tuple[int, int], datetime] = {}
+# maps (game_id, event_id) -> datetime when voting ends
 
 
 def broadcast_game_state(f):
-    # maps (game_id, event_id) -> datetime when voting ends
-    end_times: dict[tuple[int,int], datetime] = {}
-
     @functools.wraps(f)
     async def wrapper(*args, **kwargs):
         engine = get_db_engine()
@@ -78,16 +77,16 @@ def broadcast_game_state(f):
             voting_event = engine.get_voting_event(state["current_voting_event_id"])
             state["current_voting_question"] = voting_event.content
 
-            # only for frontend, doesn't affect any actual functionality: 60 sec vote time to show in sync in frontend, 
+            # only for frontend, doesn't affect any actual functionality: 60 sec vote time to show in sync in frontend,
             # this needs to be done somewhere else if we actually want to force a vote time
             key = (game_id, event_id)
             if key not in end_times:
                 # first time we see this event, new 60 sec timer
                 end_times[key] = datetime.now(timezone.utc) + timedelta(seconds=60)
-            
+
             # otherwise use the existing timer
             state["countdown_ends_at"] = end_times[key].isoformat()
-        
+
         await connection_manager.broadcast(state)
         return response
 
