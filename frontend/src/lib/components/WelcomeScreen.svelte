@@ -1,8 +1,6 @@
 <script>
 	import UserAvatar from './UserAvatar.svelte';
 	import { currentUser } from '$lib/stores/userData.svelte.js';
-
-	let { onNewVote } = $props();
 </script>
 
 <div class="welcome-container mt-8 flex w-full flex-col items-center justify-center space-y-4">
