@@ -66,6 +66,12 @@ def broadcast_game_state(f):
         )  # every return object with this decorator MUST have .game_id attribute with this implementation, can be done in a better way in the future
         game = engine.get_game(game_id=game_id)
         state = game.state
+
+        # if there's an active event, get the question text so it can be sent as well
+        if state["current_voting_event_id"]:
+            voting_event = engine.get_voting_event(state["current_voting_event_id"])
+            state["current_voting_question"] = voting_event.content
+
         await connection_manager.broadcast(state)
         return response
 
