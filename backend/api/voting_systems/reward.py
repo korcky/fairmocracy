@@ -45,12 +45,14 @@ class MajorityWithRewardSystem(MajorityVotingSystem):
         )
     
     def _log_warning(self, voting_event_id: int, error: str):
-        logging.warning(f"[VotingEvent ({voting_event_id})] Score might not be calculated: {msg}")
+        logging.warning(f"[VotingEvent ({voting_event_id})] Score might not be calculated: {error}")
 
     def voting_result(
         self, voting_event: VotingEvent, votes: list[Vote], voters: list[Voter], parties: list[Party],
     ) -> tuple[VotingResult, list[Voter], list[Party]]:
-        voting_result, _  = super().voting_result(votes)
+        voting_result, *_  = super().voting_result(
+            voting_event=voting_event, votes=votes, voters=voters, parties=parties
+        )
         
         if not (self.reward_per_voter or self.reward_per_party):
             self._log_warning(voting_event.id, "both rewards flags are set to `False`")
@@ -68,7 +70,7 @@ class MajorityWithRewardSystem(MajorityVotingSystem):
             for voter in voters:
                 if self.name not in voter.extra_info:
                     voter.extra_info[self.name] = {"current_score": 0}
-                voter.extra_info[self.name]["current_score"] += rewards[_voters_key].get(voter.id, 0)
+                voter.extra_info[self.name]["current_score"] += rewards[self._voters_key].get(str(voter.id), 0)
         elif self.reward_per_voter:
             self._log_warning(voting_event.id, f"missing voters rewards for {voting_result}")
         
@@ -77,7 +79,7 @@ class MajorityWithRewardSystem(MajorityVotingSystem):
             for party in parties:
                 if self.name not in party.extra_info:
                     party.extra_info[self.name] = {"current_score": 0}
-                party.extra_info[self.name]["current_score"] += rewards[_parties_key].get(party.id, 0)
+                party.extra_info[self.name]["current_score"] += rewards[self._parties_key].get(str(party.id), 0)
         elif self.reward_per_party:
             self._log_warning(voting_event.id, f"missing parties rewards for {voting_result}")
 

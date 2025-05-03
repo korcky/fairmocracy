@@ -110,7 +110,7 @@ class SQLEngine(AbstractEngine):
             raise NoDataFoundError
     
     def update_parties(self, parties: list[api_models.Party]):
-        parties_extra_info = {p.id: p.extra_info for v in parties}
+        parties_extra_info = {p.id: p.extra_info for p in parties}
         with Session(self.engine) as session:
             # this should be filtered 
             sql_parties = session.exec(select(sql_models.Party)).all()

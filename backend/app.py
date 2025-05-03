@@ -100,7 +100,7 @@ def on_startup():
     try:
         engine.get_active_game()
     except NoDataFoundError:
-        dummy_data.initialize(number_of_voters=0)
+        dummy_data.initialize(number_of_voters=5)
 
 
 @app.on_event("startup")
@@ -417,12 +417,13 @@ async def conclude_voting(
         )
         return Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
     voting_system = voting_system_cls(**voting_event.configuration)
+    game_id = db_engine.get_round(voting_event.round_id).game_id
     votes = db_engine.get_votes(voting_event_id=voting_event_id)
     result, voters, parties = voting_system.voting_result(
         voting_event=voting_event,
         votes=votes,
-        voters=db_engine.get_voters(voter.game_id),
-        parties=db_engine.get_parties(game_id=game_id),
+        voters=db_engine.get_voters(game_id),
+        parties=db_engine.get_parties(game_id),
     )
     db_engine.update_voting_event(
         voting_event_id=voting_event_id,
