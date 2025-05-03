@@ -31,6 +31,7 @@ from api.sse_connection_manager import SSEConnectionManager
 from database import AbstractEngine, SQLEngine
 from db_config import get_db_engine
 from configurations.config_reader import VotingConfigReader
+from datetime import datetime, timedelta, timezone
 
 app = FastAPI()
 
@@ -57,6 +58,9 @@ Decorator to broadcast game state changes to all connected clients using SSE
 
 
 def broadcast_game_state(f):
+    # maps (game_id, event_id) -> datetime when voting ends
+    end_times: dict[tuple[int,int], datetime] = {}
+
     @functools.wraps(f)
     async def wrapper(*args, **kwargs):
         engine = get_db_engine()
@@ -68,10 +72,22 @@ def broadcast_game_state(f):
         state = game.state
 
         # if there's an active event, get the question text so it can be sent as well
-        if state["current_voting_event_id"]:
+        event_id = state.get("current_voting_event_id")
+        if event_id:
+            # set the question here
             voting_event = engine.get_voting_event(state["current_voting_event_id"])
             state["current_voting_question"] = voting_event.content
 
+            # only for frontend, doesn't affect any actual functionality: 60 sec vote time to show in sync in frontend, 
+            # this needs to be done somewhere else if we actually want to force a vote time
+            key = (game_id, event_id)
+            if key not in end_times:
+                # first time we see this event, new 60 sec timer
+                end_times[key] = datetime.now(timezone.utc) + timedelta(seconds=60)
+            
+            # otherwise use the existing timer
+            state["countdown_ends_at"] = end_times[key].isoformat()
+        
         await connection_manager.broadcast(state)
         return response
 

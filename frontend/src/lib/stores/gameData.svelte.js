@@ -10,7 +10,8 @@ export const gameState = writable({
 	status: null,
 	current_round_id: null,
 	current_voting_event_id: null,
-	current_voting_question: null
+	current_voting_question: null,
+	countdown_ends_at: null
 });
 
 let _lastLoadedGameId = null;
@@ -69,7 +70,8 @@ export function resetGame() {
 		status: null,
 		current_round_id: null,
 		current_voting_event_id: null,
-		current_voting_question: null
+		current_voting_question: null,
+		countdown_ends_at: null
 	});
 
 	parties.set([]);
