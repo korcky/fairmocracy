@@ -12,7 +12,7 @@
 </script>
 
 <div class="info-container mt-8 flex w-full flex-col items-center justify-center space-y-4">
-	<p class="w-full max-w-xl px-4 text-left text-lg whitespace-pre-wrap">
+	<p class="w-full max-w-xl whitespace-pre-wrap px-4 text-left text-lg">
 		{currentQuestion}
 	</p>
 	<button type="button" class="variant-filled btn bg-blue-500" onclick={proceed}>
