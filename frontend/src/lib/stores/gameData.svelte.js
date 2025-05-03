@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { PUBLIC_BACKEND_URL } from '$env/static/public';
-import { currentUser, clearUserData } from './userData.svelte.js';
+import { currentUser, clearUserData, getExtraInfo } from './userData.svelte.js';
 
 export const parties = writable([]);
 export const gameState = writable({
@@ -46,6 +46,7 @@ export function initGameStateSSE() {
 			}
 
 			gameState.set(data);
+			getExtraInfo(); // Get latest extra info for user and their party when we receive new SSE
 		} catch (e) {
 			console.error('Invalid SSE payload:', evt.data, e);
 		}
