@@ -46,7 +46,8 @@
 				gameId: voter.game_id,
 				affiliations: {},
 				rounds: [],
-				votes: {}
+				votes: {},
+				isAdmin: false
 			});
 		} catch (err) {
 			console.error(err);

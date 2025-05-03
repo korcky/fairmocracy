@@ -8,7 +8,9 @@ export const currentUser = writable(
 		userId: null,
 		affiliations: {},
 		rounds: [],
-		votes: {}
+		votes: {},
+		isAdmin: false,
+		gameCode: 'No game code, go to menu -> admin and upload a valid configuration file.'
 	}
 );
 
@@ -29,6 +31,8 @@ export function clearUserData() {
 		userId: null,
 		affiliations: {},
 		rounds: [],
-		votes: {}
+		votes: {},
+		isAdmin: false,
+		gameCode: 'No game code, go to menu -> admin and upload a valid configuration file.'
 	});
 }
