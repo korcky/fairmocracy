@@ -46,7 +46,10 @@ export function initGameStateSSE() {
 				return;
 			}
 
-			gameState.set(data);
+			gameState.update((prev) => ({
+				...prev, // keep fields not in SSE
+				...data // overwrite/add only the SSE payload
+			}));
 			getExtraInfo(); // Get latest extra info for user and their party when we receive new SSE
 		} catch (e) {
 			console.error('Invalid SSE payload:', evt.data, e);
