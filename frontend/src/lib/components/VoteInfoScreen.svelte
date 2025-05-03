@@ -19,7 +19,7 @@
 	console.log("User party" , affiliationId.party_id);
 	console.log("User party" , selectedParty);
 
-	let previousId = null;
+	let questionsLeft = 0;
 	let roundsLeft = 0;
 
 	onMount(() => {
@@ -34,7 +34,20 @@
 					console.log("Round completed, remaining rounds: ", roundsLeft);
 				})
 				.catch(e => console.error("Failed to load rounds", e));
-	}
+		}
+
+		if ($gameState.current_round_id) {
+			const roundId = $gameState.current_round_id;
+			fetch(`${PUBLIC_BACKEND_URL}/round/${roundId}/voting_events`)
+				.then(res => res.json())
+				.then(data => {
+					const totalQ = data.length;
+					const currentevent = data.findIndex(r => r.id === $gameState.current_voting_event_id);
+					questionsLeft = totalQ - currentevent;
+					console.log("Voting events left: ", questionsLeft);
+				})
+				.catch(e => console.error("Failed to load voting events", e));
+		}
 	});
 
 	function proceed() {
@@ -47,7 +60,7 @@
 	<!-- Display user-specific info -->
 	<p class="text-lg font-semibold">Name: {user.name}</p>
 	<p>Your selected party: {selectedParty}</p>
-	<p>Voting rounds ahead: {roundsLeft}</p>
+	<p>Voting rounds ahead: {roundsLeft} Voting round questions ahead: {questionsLeft}</p>
 
 	<!-- Proceed button -->
 	<button type="button" class="variant-filled btn bg-blue-500" on:click={proceed}>

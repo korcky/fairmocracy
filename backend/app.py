@@ -221,6 +221,14 @@ async def get_rounds_by_game(
 ) -> list[Round]:
     return db_engine.get_rounds(game_id=game_id)
 
+@common_router.get(
+        "/round/{round_id}/voting_events",
+        response_model=list[VotingEvent])
+async def get_voting_events_by_round(
+    round_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
+) -> list[VotingEvent]:
+    return db_engine.get_voting_events(round_id=round_id)
+
 
 @common_router.get(
     "/join",
