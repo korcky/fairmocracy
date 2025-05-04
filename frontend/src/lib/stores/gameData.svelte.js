@@ -25,6 +25,7 @@ export async function loadParties(gameId) {
 		if (!res.ok) throw new Error(`Status ${res.status}`);
 		const data = await res.json();
 		parties.set(data);
+		console.log('Parties loaded:', data);
 	} catch (e) {
 		console.error('Failed to load parties', e);
 	}

@@ -298,7 +298,29 @@ class SQLEngine(AbstractEngine):
                     round_id=event.round_id,
                 )
             raise NoDataFoundError
+        
+    def get_voting_events(self, round_id: int) -> list[api_models.VotingEvent]:
+        with Session(self.engine) as session:
+            events = session.exec(
+                select(sql_models.VotingEvent).where(sql_models.VotingEvent.round_id == round_id)
+            ).all()
+            if events:
+                return [
+                    api_models.VotingEvent(
+                        id=event.id,
+                        title=event.title,
+                        content=event.content,
+                        voting_system=event.voting_system,
+                        result=event.result,
+                        configuration=event.configuration,
+                        extra_info=event.extra_info,
+                        round_id=event.round_id,
+                    )
+                    for event in events
+                ]
 
+            raise NoDataFoundError
+    
     def update_voting_event(
         self,
         voting_event_id: int,
