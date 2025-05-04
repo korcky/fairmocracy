@@ -15,7 +15,7 @@
 	import GameEndedScreen from './GameEndedScreen.svelte';
 
 	// Store imports
-	import { currentUser } from '$lib/stores/userData.svelte.js';
+	import { currentUser, getExtraInfo } from '$lib/stores/userData.svelte.js';
 	import { gameState, initGameStateSSE, loadParties } from '$lib/stores/gameData.svelte.js';
 	import { currentScreen } from '$lib/stores/screenStore.svelte.js';
 
@@ -29,7 +29,11 @@
 		gameState.subscribe(($game) => {
 			if ($game.id && $game.id !== _lastLoadedGameId) {
 				_lastLoadedGameId = $game.id;
+				console.log(`[AppCore] Loading parties for game ${$game.id}`);
 				loadParties($game.id);
+			}
+			if ($game.current_voting_event_id) {
+				getExtraInfo();
 			}
 		});
 	});
