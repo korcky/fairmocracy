@@ -15,7 +15,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import UploadFile, File
 from database.abstract_engine import NoDataFoundError
 import dummy_data
-from api.voting_systems import AbstractVotingSystem, VotingResult, MajorityVotingSystem
+from api.voting_systems import (
+    AbstractVotingSystem,
+    VotingResult,
+    MajorityVotingSystem,
+    MajorityWithRewardSystem,
+)
 from api.models import (
     Voter,
     Vote,
@@ -48,6 +53,7 @@ common_router = APIRouter()
 # the calculation of the voting event result
 AVAILABLE_VOTING_SYSTEM_CLS = {
     VotingSystem.MAJORITY: MajorityVotingSystem,
+    VotingSystem.MAJORITY_WITH_REWARD: MajorityWithRewardSystem,
 }
 
 connection_manager = SSEConnectionManager()
@@ -87,6 +93,20 @@ def broadcast_game_state(f):
             # otherwise use the existing timer
             state["countdown_ends_at"] = end_times[key].isoformat()
 
+        if game.current_voting_event_id:
+            voting_event = engine.get_voting_event(game.current_voting_event_id)
+            # Structure for extra_info in VotingEvent:
+            # {
+            #    "voting_system_nam": {
+            #         VotingResult.ACCEPTED: {
+            #             "voters": {voter_id_0: voter_reward_0, ...},
+            #             "parties": {party_id_0: party_reward_0, ...}
+            #         }
+            #         VotingResult.REJECTED: {...},
+            #         ...
+            #     }
+            # }
+            state["extra_info"] = voting_event.extra_info
         await connection_manager.broadcast(state)
         return response
 
@@ -101,7 +121,7 @@ def on_startup():
     try:
         engine.get_active_game()
     except NoDataFoundError:
-        dummy_data.initialize(number_of_voters=0)
+        dummy_data.initialize(number_of_voters=5)
 
 
 @app.on_event("startup")
@@ -117,18 +137,27 @@ async def startup_event():
     "/{user_id}",
     tags=["user"],
 )
-async def get_user(user_id: str, db_engine: AbstractEngine = Depends(get_db_engine)):
-    return Response(status_code=HTTPStatus.NO_CONTENT)
+async def get_user(user_id: str, db_engine: AbstractEngine = Depends(get_db_engine)) -> Voter:
+    """
+    Structure for extra_info
+    {
+        voting_system_name: {
+            stat_1: value_1,
+            ....
+        }
+    }
+    """
+    return db_engine.get_voter(user_id)
 
 
 @user_router.post(
     "/login",
     tags=["user"],
 )
-@broadcast_game_state
 async def login(
     key: str | None = None, db_engine: AbstractEngine = Depends(get_db_engine)
 ):
+    # Not in use by frontend
     return Response(status_code=HTTPStatus.NO_CONTENT)
 
 
@@ -139,6 +168,7 @@ async def login(
 async def get_current_state(
     game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ):
+    # Not in use by frontend
     game = db_engine.get_game(game_id=game_id)
     if not game:
         return Response(status_code=HTTPStatus.BAD_REQUEST)
@@ -195,7 +225,6 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
         f"Configured players: {game.n_voters}, "
         f"Votes so far: {len(votes_after)}"
     )
-
     content = {
         "voter_id": vote.voter_id,
         "round_id": voting_event.round_id,
@@ -211,7 +240,6 @@ app.include_router(user_router, prefix="/v1/user")
 app.include_router(game_router, prefix="/v1/voting")
 
 
-# TODO refactor stuff below (especially pathes and tags)
 @common_router.get(
     "/game/{game_id}/parties",
     response_model=list[Party],
@@ -219,6 +247,15 @@ app.include_router(game_router, prefix="/v1/voting")
 async def read_parties_by_game(
     game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ) -> list[Party]:
+    """
+    Structure for extra_info
+    {
+        voting_system_name: {
+            stat_1: value_1,
+            ....
+        }
+    }
+    """
     try:
         return db_engine.get_parties(game_id=game_id)
     except NoDataFoundError:
@@ -285,7 +322,6 @@ async def register_to_vote(
     affiliation: Affiliation,
     db_engine: AbstractEngine = Depends(get_db_engine),
 ) -> Affiliation:
-
     new_aff = db_engine.add_affiliation(affiliation=affiliation)
 
     voter = db_engine.get_voter(new_aff.voter_id)
@@ -378,6 +414,15 @@ async def upload_config(
         )
 
 
+@common_router.get(
+    "/voting_event/{voting_event_id}",
+)
+async def get_voting_event(
+    voting_event_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
+):
+    return db_engine.get_voting_event(voting_event_id=voting_event_id)
+
+
 # TODO: get voting event through Dependency?
 @common_router.post(
     "/voting_event/{voting_event_id}/conclude",
@@ -394,14 +439,22 @@ async def conclude_voting(
         )
         return Response(status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
     voting_system = voting_system_cls(**voting_event.configuration)
+    game_id = db_engine.get_round(voting_event.round_id).game_id
     votes = db_engine.get_votes(voting_event_id=voting_event_id)
-    result, side_effects = voting_system.voting_result(votes=votes)
+    result, voters, parties = voting_system.voting_result(
+        voting_event=voting_event,
+        votes=votes,
+        voters=db_engine.get_voters(game_id),
+        parties=db_engine.get_parties(game_id),
+    )
     db_engine.update_voting_event(
         voting_event_id=voting_event_id,
         voting_result=result,
-        # TODO: work with side effects
-        # extra_info=...
     )
+    if voters:
+        db_engine.update_voters(voters)
+    if parties:
+        db_engine.update_parties(parties)
     return Response(
         status_code=HTTPStatus.OK, content=json.dumps({"voting_event_result": result})
     )
