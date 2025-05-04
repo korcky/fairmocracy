@@ -156,6 +156,7 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
     voting_event = db_engine.get_voting_event(vote.voting_event_id)
     round = db_engine.get_round(voting_event.round_id)
     game = db_engine.get_game(round.game_id)
+    n_voters = len(db_engine.get_voters(round.game_id))
     if not game:
         raise ValueError("Game not found for the given voting event ID")
     # check that the voting event is active
@@ -163,15 +164,18 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
         raise ValueError("Game is not started")
     if not game.current_voting_event_id == vote.voting_event_id:
         raise ValueError("Voting event is not active")
-    votes = db_engine.get_votes(vote.voting_event_id)
+    votes_before = db_engine.get_votes(vote.voting_event_id)
     # check that the voter hasn't voted in this event yet
-    if any(v.voter_id == vote.voter_id for v in votes):
+    if any(v.voter_id == vote.voter_id for v in votes_before):
         raise ValueError("Voter has already voted in this event")
+    db_engine.cast_vote(vote)
+    votes_after = db_engine.get_votes(vote.voting_event_id)
     # if this will be the last vote,
     # set current_voting_event_id (if there are more voting events left in the round)
     # or set current_round_id and status to waiting (if there are more rounds left)
     # or set status to ended (if there are no more voting events or rounds left)
-    if len(votes) == game.n_voters - 1:
+    if len(votes_after) == n_voters:
+        await conclude_voting(voting_event_id=voting_event.id, db_engine=db_engine)
         try:
             print("Last voter, starting next event!")
             db_engine.start_next_event(game.id)
@@ -189,9 +193,9 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
         f"event_id={vote.voting_event_id}, "
         f"value={vote.value}, "
         f"Configured players: {game.n_voters}, "
-        f"Votes so far: {len(votes)+1}"  # +1 since votes is fetched before casting new one
+        f"Votes so far: {len(votes_after)}"
     )
-    db_engine.cast_vote(vote)
+
     content = {
         "voter_id": vote.voter_id,
         "round_id": voting_event.round_id,
