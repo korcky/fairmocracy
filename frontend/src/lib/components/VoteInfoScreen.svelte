@@ -1,24 +1,24 @@
 <script>
 	import { get } from 'svelte/store';
 	import { hasSeenInfo } from '$lib/stores/screenStore.svelte.js';
-	import { gameState, parties} from '$lib/stores/gameData.svelte.js';
+	import { gameState, parties } from '$lib/stores/gameData.svelte.js';
 	import { currentUser } from '$lib/stores/userData.svelte.js';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { onMount } from 'svelte';
-	
+
 	console.log($parties);
 	let selectedParty = '';
 	let user = $currentUser;
 	let RoundId = $gameState.current_round_id;
 	let affiliationId = user.affiliations[RoundId];
 	if (affiliationId.party_id && $parties.length > 0) {
-			const party = $parties.find(p => p.id === affiliationId.party_id);
-			selectedParty = party.name ?? 'Unknown';
-		}
-	console.log("RoundId" , RoundId);
-	console.log("user affiliation" , affiliationId);
-	console.log("User party" , affiliationId.party_id);
-	console.log("User party" , selectedParty);
+		const party = $parties.find((p) => p.id === affiliationId.party_id);
+		selectedParty = party.name ?? 'Unknown';
+	}
+	console.log('RoundId', RoundId);
+	console.log('user affiliation', affiliationId);
+	console.log('User party', affiliationId.party_id);
+	console.log('User party', selectedParty);
 
 	let questionsLeft = 0;
 	let roundsLeft = 0;
@@ -27,27 +27,27 @@
 		if ($gameState.id) {
 			const gameId = $gameState.id;
 			fetch(`${PUBLIC_BACKEND_URL}/game/${gameId}/rounds`)
-				.then(res => res.json())
-				.then(data => {
+				.then((res) => res.json())
+				.then((data) => {
 					const totalRounds = data.length;
-					const currentIndex = data.findIndex(r => r.id === $gameState.current_round_id);
+					const currentIndex = data.findIndex((r) => r.id === $gameState.current_round_id);
 					roundsLeft = totalRounds - currentIndex - 1;
-					console.log("Round completed, remaining rounds: ", roundsLeft);
+					console.log('Round completed, remaining rounds: ', roundsLeft);
 				})
-				.catch(e => console.error("Failed to load rounds", e));
+				.catch((e) => console.error('Failed to load rounds', e));
 		}
 
 		if ($gameState.current_round_id) {
 			const roundId = $gameState.current_round_id;
 			fetch(`${PUBLIC_BACKEND_URL}/round/${roundId}/voting_events`)
-				.then(res => res.json())
-				.then(data => {
+				.then((res) => res.json())
+				.then((data) => {
 					const totalQ = data.length;
-					const currentevent = data.findIndex(r => r.id === $gameState.current_voting_event_id);
+					const currentevent = data.findIndex((r) => r.id === $gameState.current_voting_event_id);
 					questionsLeft = totalQ - currentevent;
-					console.log("Voting events left: ", questionsLeft);
+					console.log('Voting events left: ', questionsLeft);
 				})
-				.catch(e => console.error("Failed to load voting events", e));
+				.catch((e) => console.error('Failed to load voting events', e));
 		}
 	});
 

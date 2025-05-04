@@ -1,6 +1,6 @@
 <script>
 	import { z } from 'zod';
-	import { setUserData } from '$lib/stores/userData.svelte.js';
+	import { setUserData, getExtraInfo } from '$lib/stores/userData.svelte.js';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { gameState } from '$lib/stores/gameData.svelte.js';
 
@@ -49,6 +49,7 @@
 				votes: {},
 				isAdmin: false
 			});
+			getExtraInfo();
 		} catch (err) {
 			console.error(err);
 			if (err instanceof z.ZodError) {
