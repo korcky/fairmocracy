@@ -116,6 +116,7 @@ def plot_data(game_id: int, round_id: int, voting_event_ids: list[int]):
     axs[0].set_ylabel('Patry score')
     axs[0].tick_params(axis="x", which="both", bottom=False, labelbottom=False)
     axs[1].set_ylabel('Voter score (first 10)')
+    axs[1].set_xlabel('Voting event ID')
     axs[1].set_xticks(np.arange(len(voting_events) + 1), ['before'] + [v.id for v in voting_events])
     plt.savefig(plot_path("reward_change.png"))
     plt.close()
