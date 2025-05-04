@@ -2,37 +2,40 @@
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { setUserData } from '$lib/stores/userData.svelte.js';
 	import { loadParties, gameState } from '$lib/stores/gameData.svelte.js';
+	import { getExtraInfo } from '$lib/stores/userData.svelte.js';
 
 	let gameCode = $state('');
 	let error = $state('');
 
-	const onsubmit = (e) => {
+	const onsubmit = async (e) => {
 		e.preventDefault();
 		error = '';
+		console.log('[GameSelection] submitting code', gameCode);
 
-		fetch(`${PUBLIC_BACKEND_URL}/join?game_hash=${encodeURIComponent(gameCode)}`)
-			.then((res) => {
-				if (!res.ok) {
-					error = `Game code submission failed: ${res.statusText}`;
-					return null;
-				}
-				return res.json();
-			})
-			.then((gameObj) => {
-				if (!gameObj) return;
-				setUserData({ gameId: gameObj.id });
-				gameState.update((prev) => ({
-					...prev,
-					...gameObj,
-					frontend_round_n: gameObj.current_round_id ? 1 : 0,
-					frontend_event_n: gameObj.current_voting_event_id ? 1 : 0
-				}));
-				loadParties(gameObj.id);
-			})
-			.catch((err) => {
-				console.error(err);
-				error = 'Network error';
-			});
+		try {
+			const res = await fetch(
+				`${PUBLIC_BACKEND_URL}/join?game_hash=${encodeURIComponent(gameCode)}`
+			);
+			if (!res.ok) {
+				error = `Game code submission failed: ${res.status} ${res.statusText}`;
+				return;
+			}
+			const gameObj = await res.json();
+			console.log('[GameSelection] joined game, response:', gameObj);
+
+			setUserData({ gameId: gameObj.id });
+			gameState.update((prev) => ({
+				...prev,
+				...gameObj,
+				frontend_round_n: gameObj.current_round_id ? 1 : 0,
+				frontend_event_n: gameObj.current_voting_event_id ? 1 : 0
+			}));
+			loadParties(gameObj.id);
+			getExtraInfo();
+		} catch (err) {
+			console.error('[GameSelection] network error:', err);
+			error = 'Network error';
+		}
 	};
 </script>
 

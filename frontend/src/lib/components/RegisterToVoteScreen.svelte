@@ -48,7 +48,7 @@
 			setUserData({
 				affiliations: {
 					...user.affiliations,
-					[affiliation.round_id]: affiliation.id
+					[affiliation.round_id]: affiliation.party_id
 				}
 			});
 		} catch (e) {

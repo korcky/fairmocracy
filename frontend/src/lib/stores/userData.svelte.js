@@ -7,7 +7,6 @@ let _lastLoadedUserId = null;
 let _lastLoadedEventId = null; // To check whether we fetch new extra info
 let _inFlightUserExtra = false; // Flag to add extra safety to prevent getExtraInfo from fetching user multiple times
 let _inFlightPartyExtra = false; // Same as above but for user's party
-let _inFlightEventRewards = false; // For current event's rewards
 
 export const currentUser = writable(
 	(browser && JSON.parse(localStorage.getItem('userData'))) || {
@@ -54,7 +53,6 @@ export function clearUserData() {
 	_lastLoadedEventId = null;
 	_inFlightUserExtra = false;
 	_inFlightPartyExtra = false;
-	_inFlightEventRewards = false;
 }
 
 export async function getExtraInfo() {
@@ -106,40 +104,29 @@ export async function getExtraInfo() {
 	}
 
 	// Get possible rewards for the event
-	if (!_inFlightEventRewards) {
-		_inFlightEventRewards = true;
-		try {
-			const res = await fetch(`${PUBLIC_BACKEND_URL}/v1/voting/current_state/${gameId}`);
-			if (res.ok) {
-				const evt = await res.json();
-				const sys = evt.voting_system;
-				const rewards = evt.extra_info?.[sys] || {};
-				// rewards should be like { ACCEPTED: { voters: {…}, parties: {…} }, REJECTED: { … } }
+	const gs = get(gameState);
+	const evtId = gs.current_voting_event_id;
+	if (!evtId) return;
 
-				// user individual rewards (default 0):
-				const userRewards = {
-					accepted: rewards.ACCEPTED?.voters?.[userId] ?? 0,
-					rejected: rewards.REJECTED?.voters?.[userId] ?? 0
-				};
+	const sys = gs.voting_system;
+	const tables = gs.extra_info?.[sys] || { ACCEPTED: {}, REJECTED: {} };
 
-				// party rewards (default 0):
-				const partyAccepted = rewards.ACCEPTED?.parties || {};
-				const partyRejected = rewards.REJECTED?.parties || {};
-				const userPartyId = affiliations[roundId];
-				const userPartyRewards = {
-					accepted: partyAccepted[userPartyId] ?? 0,
-					rejected: partyRejected[userPartyId] ?? 0
-				};
+	const uid = String(get(currentUser).userId);
+	const pid = String(get(currentUser).affiliations[gs.current_round_id]);
 
-				setUserData({
-					eventRewards: userRewards,
-					partyEventRewards: userPartyRewards
-				});
-			}
-		} catch (e) {
-			console.error('Failed to load rewards for event', e);
-		} finally {
-			_inFlightEventRewards = false;
-		}
-	}
+	const acceptedVoters = tables.ACCEPTED?.voters || {};
+	const rejectedVoters = tables.REJECTED?.voters || {};
+	const acceptedParties = tables.ACCEPTED?.parties || {};
+	const rejectedParties = tables.REJECTED?.parties || {};
+
+	const userRewards = {
+		accepted: acceptedVoters[uid] ?? 0,
+		rejected: rejectedVoters[uid] ?? 0
+	};
+	const partyRewards = {
+		accepted: acceptedParties[pid] ?? 0,
+		rejected: rejectedParties[pid] ?? 0
+	};
+
+	setUserData({ eventRewards: userRewards, partyEventRewards: partyRewards });
 }

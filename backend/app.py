@@ -85,6 +85,7 @@ def broadcast_game_state(f):
             # set the question here
             voting_event = engine.get_voting_event(state["current_voting_event_id"])
             state["current_voting_question"] = voting_event.content
+            state["voting_system"] = voting_event.voting_system
 
             # only for frontend, doesn't affect any actual functionality: 60 sec vote time to show in sync in frontend,
             # this needs to be done somewhere else if we actually want to force a vote time
@@ -122,18 +123,18 @@ def on_startup():
     engine.startup_initialization()
 
     # disable for demo?
-    try:
-        engine.get_active_game()
-    except NoDataFoundError:
-        try:
-            with open("./configurations/examples/configuration.json", "rb") as f:
-                configurations.upload_configuration(
-                    configuration=json.load(f),
-                    number_of_real_voters=0,
-                )
-        except Exception as e:
-            logging.warning(f"using old initialization, reasone {e}")
-            dummy_data.initialize(number_of_voters=5)
+    # try:
+    #     engine.get_active_game()
+    # except NoDataFoundError:
+    #     try:
+    #         with open("./configurations/examples/configuration.json", "rb") as f:
+    #             configurations.upload_configuration(
+    #                 configuration=json.load(f),
+    #                 number_of_real_voters=0,
+    #             )
+    #     except Exception as e:
+    #         logging.warning(f"using old initialization, reasone {e}")
+    #         dummy_data.initialize(number_of_voters=5)
 
 
 @app.on_event("startup")
@@ -379,7 +380,7 @@ async def upload_config(
 
         game = configurations.upload_configuration(
             configuration=json.loads(raw_bytes),
-            number_of_real_voters=1,  # unhardcode?
+            number_of_real_voters=2,  # unhardcode?
         )
 
         resp = JSONResponse(

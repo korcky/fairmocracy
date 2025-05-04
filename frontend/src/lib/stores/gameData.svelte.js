@@ -20,16 +20,21 @@ let _lastLoadedGameId = null;
 let _evtSource = null;
 
 export async function loadParties(gameId) {
-	if (gameId === _lastLoadedGameId) return;
+	console.log(`[gameData] loadParties called with gameId=${gameId}`);
+	if (gameId === _lastLoadedGameId) {
+		console.log('[gameData] same gameId — skipping');
+		return;
+	}
 	_lastLoadedGameId = gameId;
 
 	try {
 		const res = await fetch(`${PUBLIC_BACKEND_URL}/game/${gameId}/parties`);
 		if (!res.ok) throw new Error(`Status ${res.status}`);
 		const data = await res.json();
+		console.log('[gameData] loaded parties:', data);
 		parties.set(data);
 	} catch (e) {
-		console.error('Failed to load parties', e);
+		console.error('[gameData] Failed to load parties:', e);
 	}
 }
 

@@ -39,6 +39,11 @@ def upload_configuration(
             session.add(_round)
         session.flush()
 
+        # this should fix fetching parties via /game/{id}/parties
+        game.current_round_id = rounds_map[min(rounds)].id
+        session.add(game)
+        session.flush()
+
         parties = [
             sql_models.Party(name=party["name"], round_id=rounds_map[party["round_id"]].id)
             for party in configuration["parties"]
