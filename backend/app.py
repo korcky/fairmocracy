@@ -82,23 +82,11 @@ def broadcast_game_state(f):
         # if there's an active event, get the question text so it can be sent as well
         event_id = state.get("current_voting_event_id")
         if event_id:
-            # set the question here
-            voting_event = engine.get_voting_event(state["current_voting_event_id"])
+            # set the question, system and extra info here
+            voting_event = engine.get_voting_event(event_id)
             state["current_voting_question"] = voting_event.content
             state["voting_system"] = voting_event.voting_system
-
-            # only for frontend, doesn't affect any actual functionality: 60 sec vote time to show in sync in frontend,
-            # this needs to be done somewhere else if we actually want to force a vote time
-            key = (game_id, event_id)
-            if key not in end_times:
-                # first time we see this event, new 60 sec timer
-                end_times[key] = datetime.now(timezone.utc) + timedelta(seconds=60)
-
-            # otherwise use the existing timer
-            state["countdown_ends_at"] = end_times[key].isoformat()
-
-        if game.current_voting_event_id:
-            voting_event = engine.get_voting_event(game.current_voting_event_id)
+            state["extra_info"] = voting_event.extra_info
             # Structure for extra_info in VotingEvent:
             # {
             #    "voting_system_nam": {
@@ -110,7 +98,17 @@ def broadcast_game_state(f):
             #         ...
             #     }
             # }
-            state["extra_info"] = voting_event.extra_info
+
+            # only for frontend, doesn't affect any actual functionality: 60 sec vote time to show in sync in frontend,
+            # this needs to be done somewhere else if we actually want to force a vote time
+            key = (game_id, event_id)
+            if key not in end_times:
+                # first time we see this event, new 60 sec timer
+                end_times[key] = datetime.now(timezone.utc) + timedelta(seconds=60)
+
+            # otherwise use the existing timer
+            state["countdown_ends_at"] = end_times[key].isoformat()
+
         await connection_manager.broadcast(state)
         return response
 
