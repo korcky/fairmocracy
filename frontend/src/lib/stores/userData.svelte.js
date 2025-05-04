@@ -6,6 +6,7 @@ import { PUBLIC_BACKEND_URL } from '$env/static/public';
 let _lastLoadedEventId = null; // To check whether we fetch new extra info
 let _inFlightUserExtra = false; // Flag to add extra safety to prevent getExtraInfo from fetching user multiple times
 let _inFlightPartyExtra = false; // Same as above but for user's party
+let _inFlightEventRewards = false; // For current event's rewards
 
 export const currentUser = writable(
 	(browser && JSON.parse(localStorage.getItem('userData'))) || {
@@ -48,6 +49,7 @@ export function clearUserData() {
 	_lastLoadedEventId = null;
 	_inFlightUserExtra = false;
 	_inFlightPartyExtra = false;
+	_inFlightEventRewards = false;
 }
 
 export async function getExtraInfo() {
@@ -63,8 +65,6 @@ export async function getExtraInfo() {
 			const res = await fetch(`${PUBLIC_BACKEND_URL}/v1/user/${userId}`);
 			if (res.ok) {
 				const { extra_info } = await res.json();
-				// TODO: Check how the actual response for extra info looks like when it's implemented in the backend
-				// since it possibly isn't exactly called "extra_info"
 				setUserData({ extraInfo: extra_info });
 			}
 		} catch (e) {
@@ -83,14 +83,50 @@ export async function getExtraInfo() {
 			if (res.ok) {
 				const parties = await res.json();
 				const userPartyData = parties.find((p) => p.id === userPartyId);
-				// TODO: Check how the actual response for extra info looks like when it's implemented in the backend
-				// since it possibly isn't exactly called "extra_info"
-				if (userPartyData) setUserData({ partyExtraInfo: userPartyData.extra_info });
+				if (userPartyData) setUserData({ partyExtraInfo: userPartyData?.extra_info || {} });
 			}
 		} catch (e) {
 			console.error('Failed to load party extraInfo', e);
 		} finally {
 			_inFlightPartyExtra = false;
+		}
+	}
+
+	// Get possible rewards for the event
+	if (!_inFlightEventRewards) {
+		_inFlightEventRewards = true;
+		try {
+			const res = await fetch(`${PUBLIC_BACKEND_URL}/v1/voting/current_state/${gameId}`);
+			if (res.ok) {
+				const evt = await res.json();
+				const sys = evt.voting_system;
+				const rewards = evt.extra_info?.[sys] || {};
+				// rewards should be like { ACCEPTED: { voters: {…}, parties: {…} }, REJECTED: { … } }
+
+				// user individual rewards:
+				const userVoterRewards = {
+					accepted: rewards.ACCEPTED?.voters?.[userId] ?? 0,
+					rejected: rewards.REJECTED?.voters?.[userId] ?? 0
+				};
+				// party rewards:
+				const userPartyId = affiliations[roundId];
+				const userPartyRewards =
+					userPartyId != null
+						? {
+								accepted: rewards.ACCEPTED?.parties?.[userPartyId] ?? 0,
+								rejected: rewards.REJECTED?.parties?.[userPartyId] ?? 0
+							}
+						: null;
+
+				setUserData({
+					eventRewards: userVoterRewards,
+					partyEventRewards: userPartyRewards
+				});
+			}
+		} catch (e) {
+			console.error('Failed to load rewards for event', e);
+		} finally {
+			_inFlightEventRewards = false;
 		}
 	}
 }
