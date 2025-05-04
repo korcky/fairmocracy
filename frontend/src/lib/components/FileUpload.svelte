@@ -13,11 +13,11 @@
 
 		console.log('file:', file);
 
-		if (file && file.name.toLowerCase().endsWith('.csv')) {
+		if (file && file.name.toLowerCase().endsWith('.json')) {
 			uploadedFile = file;
 		} else {
 			uploadedFile = null;
-			alert('Please upload a valid CSV file.');
+			alert('Please upload a valid JSON file.');
 		}
 	}
 	async function startGame() {
@@ -74,7 +74,7 @@
 	<div class="mx-auto max-w-md rounded border-2 border-dashed border-gray-300 bg-transparent p-4">
 		<FileDropzone
 			name="config"
-			accept=".csv"
+			accept=".json"
 			maxFiles={1}
 			on:change={handleFileChange}
 			class="w-full bg-transparent"
@@ -86,7 +86,7 @@
 					Select config file or drag here
 				{/if}
 			</svelte:fragment>
-			<svelte:fragment slot="meta">Only .csv files allowed, Max: 1 files</svelte:fragment>
+			<svelte:fragment slot="meta">Only .json files allowed, Max: 1 files</svelte:fragment>
 		</FileDropzone>
 	</div>
 

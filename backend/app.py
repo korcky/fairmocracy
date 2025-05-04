@@ -1,20 +1,22 @@
 import asyncio
+import functools
 import json
 import signal
 import logging
 import io
 from http import HTTPStatus
 from sqlite3 import IntegrityError as DBIntegrityError
+from typing import Annotated
+
 from sqlalchemy.exc import IntegrityError as SAIntegrityError
 from pandas.errors import EmptyDataError, ParserError
-from typing import Annotated
-import functools
 from fastapi import APIRouter, Depends, FastAPI, Cookie
 from fastapi.responses import Response, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import UploadFile, File
-from database.abstract_engine import NoDataFoundError
+
 import dummy_data
+import configurations
 from api.voting_systems import (
     AbstractVotingSystem,
     VotingResult,
@@ -33,9 +35,11 @@ from api.models import (
     GameStatus,
 )
 from api.sse_connection_manager import SSEConnectionManager
+from database.abstract_engine import NoDataFoundError
 from database import AbstractEngine, SQLEngine
 from db_config import get_db_engine
 from configurations.config_reader import VotingConfigReader
+from datetime import datetime, timedelta, timezone
 
 app = FastAPI()
 
@@ -60,6 +64,8 @@ connection_manager = SSEConnectionManager()
 """
 Decorator to broadcast game state changes to all connected clients using SSE
 """
+end_times: dict[tuple[int, int], datetime] = {}
+# maps (game_id, event_id) -> datetime when voting ends
 
 
 def broadcast_game_state(f):
@@ -72,6 +78,25 @@ def broadcast_game_state(f):
         )  # every return object with this decorator MUST have .game_id attribute with this implementation, can be done in a better way in the future
         game = engine.get_game(game_id=game_id)
         state = game.state
+
+        # if there's an active event, get the question text so it can be sent as well
+        event_id = state.get("current_voting_event_id")
+        if event_id:
+            # set the question here
+            voting_event = engine.get_voting_event(state["current_voting_event_id"])
+            state["current_voting_question"] = voting_event.content
+            state["voting_system"] = voting_event.voting_system
+
+            # only for frontend, doesn't affect any actual functionality: 60 sec vote time to show in sync in frontend,
+            # this needs to be done somewhere else if we actually want to force a vote time
+            key = (game_id, event_id)
+            if key not in end_times:
+                # first time we see this event, new 60 sec timer
+                end_times[key] = datetime.now(timezone.utc) + timedelta(seconds=60)
+
+            # otherwise use the existing timer
+            state["countdown_ends_at"] = end_times[key].isoformat()
+
         if game.current_voting_event_id:
             voting_event = engine.get_voting_event(game.current_voting_event_id)
             # Structure for extra_info in VotingEvent:
@@ -97,10 +122,19 @@ def on_startup():
     engine = get_db_engine()
     engine.startup_initialization()
 
-    try:
-        engine.get_active_game()
-    except NoDataFoundError:
-        dummy_data.initialize(number_of_voters=5)
+    # disable for demo?
+    # try:
+    #     engine.get_active_game()
+    # except NoDataFoundError:
+    #     try:
+    #         with open("./configurations/examples/configuration.json", "rb") as f:
+    #             configurations.upload_configuration(
+    #                 configuration=json.load(f),
+    #                 number_of_real_voters=0,
+    #             )
+    #     except Exception as e:
+    #         logging.warning(f"using old initialization, reasone {e}")
+    #         dummy_data.initialize(number_of_voters=5)
 
 
 @app.on_event("startup")
@@ -173,15 +207,18 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
         raise ValueError("Game is not started")
     if not game.current_voting_event_id == vote.voting_event_id:
         raise ValueError("Voting event is not active")
-    votes = db_engine.get_votes(vote.voting_event_id)
+    votes_before = db_engine.get_votes(vote.voting_event_id)
     # check that the voter hasn't voted in this event yet
-    if any(v.voter_id == vote.voter_id for v in votes):
+    if any(v.voter_id == vote.voter_id for v in votes_before):
         raise ValueError("Voter has already voted in this event")
+    db_engine.cast_vote(vote)
+    votes_after = db_engine.get_votes(vote.voting_event_id)
     # if this will be the last vote,
     # set current_voting_event_id (if there are more voting events left in the round)
     # or set current_round_id and status to waiting (if there are more rounds left)
     # or set status to ended (if there are no more voting events or rounds left)
-    if len(votes) == n_voters - 1:
+    if len(votes_after) == n_voters:
+        await conclude_voting(voting_event_id=voting_event.id, db_engine=db_engine)
         try:
             print("Last voter, starting next event!")
             db_engine.start_next_event(game.id)
@@ -199,10 +236,8 @@ async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engin
         f"event_id={vote.voting_event_id}, "
         f"value={vote.value}, "
         f"Configured players: {game.n_voters}, "
-        f"Votes so far: {len(votes)+1}"  # +1 since votes is fetched before casting new one
+        f"Votes so far: {len(votes_after)}"
     )
-    db_engine.cast_vote(vote)
-    await conclude_voting(voting_event_id=voting_event.id, db_engine=db_engine)
     content = {
         "voter_id": vote.voter_id,
         "round_id": voting_event.round_id,
@@ -350,10 +385,11 @@ async def upload_config(
 ):
     try:
         raw_bytes = await file.read()
-        csv_text = raw_bytes.decode("utf-8")
 
-        reader = VotingConfigReader(io.StringIO(csv_text))
-        game = reader.get_game()
+        game = configurations.upload_configuration(
+            configuration=json.loads(raw_bytes),
+            number_of_real_voters=2,  # unhardcode?
+        )
 
         resp = JSONResponse(
             status_code=HTTPStatus.OK,

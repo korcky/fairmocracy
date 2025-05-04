@@ -36,7 +36,7 @@ class SSEConnectionManager:
         try:
             while True:
                 event = await queue.get()
-                print("Broadcasting event to client:", event)  # Debug log here
+                # print("Broadcasting event to client:", event)  # Debug log here
                 yield f"data: {json.dumps(event)}\n\n"
         except asyncio.CancelledError:
             if queue in self.active_connections:
