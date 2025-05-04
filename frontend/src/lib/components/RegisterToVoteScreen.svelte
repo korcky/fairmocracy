@@ -48,7 +48,7 @@
 			setUserData({
 				affiliations: {
 					...user.affiliations,
-					[affiliation.round_id]: affiliation.id
+					[affiliation.round_id]: affiliation.party_id
 				}
 			});
 		} catch (e) {
@@ -59,7 +59,7 @@
 </script>
 
 <p class="p-4 text-center text-lg">
-	Round {$gameState.current_round_id}: select the party you represent.
+	Round {$gameState.frontend_round_n}: select the party you represent.
 </p>
 
 <div class="form-container">
