@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class VotingSystem(StrEnum):
     MAJORITY = "MAJORITY"
+    MAJORITY_WITH_REWARD = "MAJORITY_WITH_REWARD"
 
 
 class VoteValue(StrEnum):

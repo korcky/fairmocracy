@@ -28,7 +28,7 @@ class SQLEngine(AbstractEngine):
                     id=voter.id,
                     name=voter.name,
                     game_id=voter.game_id,
-                    extra_info=voter.extra_info,
+                    extra_info=voter.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                 )
             raise NoDataFoundError
 
@@ -43,7 +43,7 @@ class SQLEngine(AbstractEngine):
                         id=voter.id,
                         name=voter.name,
                         game_id=voter.game_id,
-                        extra_info=voter.extra_info,
+                        extra_info=voter.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                     )
                     for voter in voters
                 ]
@@ -60,6 +60,17 @@ class SQLEngine(AbstractEngine):
             session.refresh(sql_voter)
             voter.id = sql_voter.id
             return voter
+        
+    def update_voters(self, voters: list[api_models.Voter]):
+        voters_extra_info = {v.id: v.extra_info for v in voters}
+        with Session(self.engine) as session:
+            # this should be filtered 
+            sql_voters = session.exec(select(sql_models.Voter)).all()
+            for voter in sql_voters:
+                if voter.id in voters_extra_info:
+                    voter.extra_info = voters_extra_info[voter.id]
+                    session.add(voter)
+            session.commit()
 
     def get_party(self, party_id: int) -> api_models.Party:
         with Session(self.engine) as session:
@@ -70,7 +81,7 @@ class SQLEngine(AbstractEngine):
                 return api_models.Party(
                     id=party.id,
                     name=party.name,
-                    extra_info=party.extra_info,
+                    extra_info=party.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                     round_id=party.round_id,
                 )
             raise NoDataFoundError
@@ -91,12 +102,23 @@ class SQLEngine(AbstractEngine):
                     api_models.Party(
                         id=party.id,
                         name=party.name,
-                        extra_info=party.extra_info,
+                        extra_info=party.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                         round_id=party.round_id,
                     )
                     for party in parties
                 ]
             raise NoDataFoundError
+    
+    def update_parties(self, parties: list[api_models.Party]):
+        parties_extra_info = {p.id: p.extra_info for p in parties}
+        with Session(self.engine) as session:
+            # this should be filtered 
+            sql_parties = session.exec(select(sql_models.Party)).all()
+            for party in sql_parties:
+                if party.id in parties_extra_info:
+                    party.extra_info = parties_extra_info[party.id]
+                    session.add(party)
+            session.commit()
 
     def add_affiliation(
         self, affiliation: api_models.Affiliation
@@ -126,6 +148,7 @@ class SQLEngine(AbstractEngine):
                     current_round_id=game.current_round_id,
                     current_voting_event_id=game.current_voting_event_id,
                     status=game.status,
+                    n_voters=game.n_voters,
                 )
             raise NoDataFoundError
 
@@ -145,6 +168,7 @@ class SQLEngine(AbstractEngine):
                 current_round_id=game.current_round_id,
                 current_voting_event_id=game.current_voting_event_id,
                 status=game.status,
+                n_voters=game.n_voters,
             )
 
     def update_game_status(self, game_id: int, status: api_models.GameStatus) -> None:
@@ -270,7 +294,7 @@ class SQLEngine(AbstractEngine):
                     voting_system=event.voting_system,
                     result=event.result,
                     configuration=event.configuration,
-                    extra_info=event.extra_info,
+                    extra_info=event.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                     round_id=event.round_id,
                 )
             raise NoDataFoundError
@@ -311,7 +335,7 @@ class SQLEngine(AbstractEngine):
             ).first()
             event.result = voting_result
             if extra_info:
-                event.extra_info = extra_info
+                event.extra_info = extra_info 
             session.add(event)
             session.commit()
 
@@ -340,7 +364,7 @@ class SQLEngine(AbstractEngine):
                     voter_id=vote.voter_id,
                     voting_event_id=vote.voting_event_id,
                     created_at=vote.created_at,
-                    extra_info=vote.extra_info,
+                    extra_info=vote.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                 )
                 for vote in votes
             ]
@@ -360,7 +384,7 @@ class SQLEngine(AbstractEngine):
                     voter_id=vote.voter_id,
                     voting_event_id=vote.voting_event_id,
                     created_at=vote.created_at,
-                    extra_info=vote.extra_info,
+                    extra_info=vote.extra_info or {}, # probably a bad fix to an error occurring with custom games, fix this in another way in the future
                 )
             raise NoDataFoundError
 
@@ -391,6 +415,7 @@ class SQLEngine(AbstractEngine):
                 current_round_id=game_row.current_round_id,
                 current_voting_event_id=game_row.current_voting_event_id,
                 status=game_row.status,
+                n_voters=game_row.n_voters,
             )
 
     def get_affiliations_for_round(self, round_id: int) -> list[api_models.Affiliation]:

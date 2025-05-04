@@ -2,6 +2,7 @@
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { FileDropzone } from '@skeletonlabs/skeleton';
 	import { goto } from '$app/navigation';
+	import { setUserData } from '$lib/stores/userData.svelte.js';
 
 	let uploadedFile: File | null = null;
 
@@ -33,6 +34,13 @@
 				if (response.ok) {
 					const result = await response.json();
 					console.log(result);
+					setUserData({
+						gameId: result.game_id,
+						gameCode: result.game_code,
+						userId: null,
+						affiliations: {},
+						votes: {}
+					});
 					alert(
 						`Game created successfully!\nGame Code: ${result.game_code}\nGame ID: ${result.game_id}\nGame Name: ${result.game_name}\nNum Rounds: ${result.num}`
 					);
@@ -84,8 +92,17 @@
 
 	<!-- Start button -->
 	<div class="mt-4 flex justify-center">
-		<button onclick={startGame} class="rounded bg-blue-500 px-4 py-2 text-white">
+		<button onclick={startGame} class="variant-filled btn rounded bg-blue-500 px-4 py-2 text-white">
 			Start Game
 		</button>
 	</div>
 </div>
+
+<style>
+	.btn {
+		color: white;
+		transition-property: all;
+		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+		transition-duration: 0.15s;
+	}
+</style>
