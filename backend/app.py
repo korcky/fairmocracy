@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import UploadFile, File
 
 import dummy_data
+import configurations
 from api.voting_systems import (
     AbstractVotingSystem,
     VotingResult,
@@ -37,7 +38,6 @@ from api.sse_connection_manager import SSEConnectionManager
 from database.abstract_engine import NoDataFoundError
 from database import AbstractEngine, SQLEngine
 from db_config import get_db_engine
-from configurations.config_reader import VotingConfigReader
 
 app = FastAPI()
 
@@ -99,10 +99,19 @@ def on_startup():
     engine = get_db_engine()
     engine.startup_initialization()
 
+    # disable for demo?
     try:
         engine.get_active_game()
     except NoDataFoundError:
-        dummy_data.initialize(number_of_voters=5)
+        try:
+            with open("./configurations/examples/configuration.json", "rb") as f:
+                configurations.upload_configuration(
+                    configuration=json.load(f),
+                    number_of_real_voters=0,
+                )
+        except Exception as e:
+            logging.warning(f"using old initialization, reasone {e}")
+            dummy_data.initialize(number_of_voters=5)
 
 
 @app.on_event("startup")
@@ -344,10 +353,11 @@ async def upload_config(
 ):
     try:
         raw_bytes = await file.read()
-        csv_text = raw_bytes.decode("utf-8")
 
-        reader = VotingConfigReader(io.StringIO(csv_text))
-        game = reader.get_game()
+        game = configurations.upload_configuration(
+            configuration=json.loads(raw_bytes),
+            number_of_real_voters=1,  # unhardcode?
+        )
 
         resp = JSONResponse(
             status_code=HTTPStatus.OK,
