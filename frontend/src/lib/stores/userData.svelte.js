@@ -3,6 +3,7 @@ import { browser } from '$app/environment';
 import { gameState } from './gameData.svelte.js';
 import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
+let _lastLoadedUserId = null;
 let _lastLoadedEventId = null; // To check whether we fetch new extra info
 let _inFlightUserExtra = false; // Flag to add extra safety to prevent getExtraInfo from fetching user multiple times
 let _inFlightPartyExtra = false; // Same as above but for user's party
@@ -19,7 +20,9 @@ export const currentUser = writable(
 		isAdmin: false,
 		gameCode: 'No game code, go to menu -> admin and upload a valid configuration file.',
 		extraInfo: null,
-		partyExtraInfo: null
+		partyExtraInfo: null,
+		eventRewards: null,
+		partyEventRewards: null
 	}
 );
 
@@ -44,7 +47,9 @@ export function clearUserData() {
 		isAdmin: false,
 		gameCode: 'No game code, go to menu -> admin and upload a valid configuration file.',
 		extraInfo: null,
-		partyExtraInfo: null
+		partyExtraInfo: null,
+		eventRewards: null,
+		partyEventRewards: null
 	});
 	_lastLoadedEventId = null;
 	_inFlightUserExtra = false;
@@ -55,8 +60,16 @@ export function clearUserData() {
 export async function getExtraInfo() {
 	const { userId, gameId, affiliations } = get(currentUser);
 	const { current_round_id: roundId, current_voting_event_id: eventId } = get(gameState);
-	if (!userId || !gameId || !roundId || !eventId || eventId === _lastLoadedEventId) return;
+	if (!userId || !gameId || !roundId || !eventId) return;
+
+	if (userId !== _lastLoadedUserId) {
+		_lastLoadedEventId = null;
+	}
+
+	if (eventId === _lastLoadedEventId) return;
+
 	_lastLoadedEventId = eventId;
+	_lastLoadedUserId = userId;
 
 	// User's personal extra info
 	if (!_inFlightUserExtra) {
@@ -103,23 +116,23 @@ export async function getExtraInfo() {
 				const rewards = evt.extra_info?.[sys] || {};
 				// rewards should be like { ACCEPTED: { voters: {…}, parties: {…} }, REJECTED: { … } }
 
-				// user individual rewards:
-				const userVoterRewards = {
+				// user individual rewards (default 0):
+				const userRewards = {
 					accepted: rewards.ACCEPTED?.voters?.[userId] ?? 0,
 					rejected: rewards.REJECTED?.voters?.[userId] ?? 0
 				};
-				// party rewards:
+
+				// party rewards (default 0):
+				const partyAccepted = rewards.ACCEPTED?.parties || {};
+				const partyRejected = rewards.REJECTED?.parties || {};
 				const userPartyId = affiliations[roundId];
-				const userPartyRewards =
-					userPartyId != null
-						? {
-								accepted: rewards.ACCEPTED?.parties?.[userPartyId] ?? 0,
-								rejected: rewards.REJECTED?.parties?.[userPartyId] ?? 0
-							}
-						: null;
+				const userPartyRewards = {
+					accepted: partyAccepted[userPartyId] ?? 0,
+					rejected: partyRejected[userPartyId] ?? 0
+				};
 
 				setUserData({
-					eventRewards: userVoterRewards,
+					eventRewards: userRewards,
 					partyEventRewards: userPartyRewards
 				});
 			}
