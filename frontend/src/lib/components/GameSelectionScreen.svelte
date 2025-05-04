@@ -21,7 +21,12 @@
 			.then((gameObj) => {
 				if (!gameObj) return;
 				setUserData({ gameId: gameObj.id });
-				gameState.set(gameObj);
+				gameState.update((prev) => ({
+					...prev,
+					...gameObj,
+					frontend_round_n: gameObj.current_round_id ? 1 : 0,
+					frontend_event_n: gameObj.current_voting_event_id ? 1 : 0
+				}));
 				loadParties(gameObj.id);
 			})
 			.catch((err) => {

@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { PUBLIC_BACKEND_URL } from '$env/static/public';
-import { currentUser, clearUserData } from './userData.svelte.js';
+import { currentUser, clearUserData, getExtraInfo } from './userData.svelte.js';
 
 export const parties = writable([]);
 export const gameState = writable({
@@ -10,7 +10,10 @@ export const gameState = writable({
 	status: null,
 	current_round_id: null,
 	current_voting_event_id: null,
-	current_voting_question: null
+	current_voting_question: null,
+	countdown_ends_at: null,
+	frontend_round_n: null,
+	frontend_event_n: null
 });
 
 let _lastLoadedGameId = null;
@@ -45,7 +48,34 @@ export function initGameStateSSE() {
 				return;
 			}
 
-			gameState.set(data);
+			gameState.update((prev) => {
+				const next = { ...prev, ...data };
+
+				// first roundId, init to 1
+				if (prev.current_round_id == null && data.current_round_id != null) {
+					next.frontend_round_n = 1;
+					next.frontend_event_n = data.current_voting_event_id != null ? 1 : 0;
+					return next;
+				}
+
+				// check for new round
+				if (prev.current_round_id !== data.current_round_id) {
+					// increase round counter
+					next.frontend_round_n = (prev.frontend_round_n || 0) + 1;
+					// reset event to 1
+					next.frontend_event_n = data.current_voting_event_id != null ? 1 : 0;
+				}
+				// if no new round check for new event
+				else if (
+					prev.current_voting_event_id !== data.current_voting_event_id &&
+					data.current_voting_event_id != null
+				) {
+					// increase event counter
+					next.frontend_event_n = (prev.frontend_event_n || 0) + 1;
+				}
+				return next;
+			});
+			getExtraInfo(); // Get latest extra info for user and their party when we receive new SSE
 		} catch (e) {
 			console.error('Invalid SSE payload:', evt.data, e);
 		}
@@ -68,7 +98,10 @@ export function resetGame() {
 		status: null,
 		current_round_id: null,
 		current_voting_event_id: null,
-		current_voting_question: null
+		current_voting_question: null,
+		countdown_ends_at: null,
+		frontend_round_n: null,
+		frontend_event_n: null
 	});
 
 	parties.set([]);
