@@ -150,4 +150,6 @@ def upload_configuration(
             game.current_voting_event_id = first_voting_event_id
             session.commit()
 
+        session.refresh(game)
+
         return game
