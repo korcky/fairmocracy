@@ -58,7 +58,7 @@
 	let { current_voting_question: currentQuestion } = get(gameState);
 </script>
 
-<div class="info-container mt-8 flex w-full flex-col items-center px-4 space-y-2">
+<div class="info-container mt-8 flex w-full flex-col items-center space-y-2 px-4">
 	<p class="text-lg font-semibold">Name: {user.name}</p>
 	<p>Your selected party: {selectedParty}</p>
 	<p>Voting rounds ahead: {roundsLeft}</p>
