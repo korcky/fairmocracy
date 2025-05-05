@@ -1,10 +1,8 @@
 <script>
 	import UserAvatar from './UserAvatar.svelte';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
-	import { onMount } from 'svelte';
 	import { currentUser } from '$lib/stores/userData.svelte.js';
-	import { gameState, parties } from '$lib/stores/gameData.svelte.js';
-	import { derived } from 'svelte/store';
+	import { gameState } from '$lib/stores/gameData.svelte.js';
 
 	let acceptedProposals = $state([]);
 	let rejectedProposals = $state([]);
