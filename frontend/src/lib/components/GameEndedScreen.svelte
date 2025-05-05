@@ -1,54 +1,41 @@
 <script>
-	import { goto } from '$app/navigation';
 	import UserAvatar from './UserAvatar.svelte';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import { onMount } from 'svelte';
 	import { currentUser } from '$lib/stores/userData.svelte.js';
-	import { gameState, parties} from '$lib/stores/gameData.svelte.js';
+	import { gameState, parties } from '$lib/stores/gameData.svelte.js';
+	import { derived } from 'svelte/store';
 
-	let selectedParty = '';
-	let user = $currentUser;
-	const {voting_system} = get(gameState);
-	let voterScore = user.extraInfo.voting_system.current_score ?? 0;
-	let partyScore = user.partyExtraInfo.voting_system.current_score ?? 0;
-	console.log("Retrieved extra info: ", user.extra_info);
-	let RoundId = $gameState.current_round_id;
-	let affiliationId = user.affiliations[RoundId];
-	if (affiliationId.party_id && $parties.length > 0) {
-			const party = $parties.find(p => p.id === affiliationId.party_id);
-			selectedParty = party.name ?? 'Unknown';
-		}
-	console.log("Retrieved extra info P: ", partyScore);
-	let isMajorityWithReward = false;
-	let acceptedProposals = [];
-	let rejectedProposals = [];
+	let acceptedProposals = $state([]);
+	let rejectedProposals = $state([]);
+	let isMajorityWithReward = $state(false);
 
-	onMount(async () => {
-		if ($gameState.current_round_id) {
-			const roundId = $gameState.current_round_id;
-			fetch(`${PUBLIC_BACKEND_URL}/round/${roundId}/voting_events`)
-				.then(res => res.json())
-				.then(votingEvents => {
-					console.log("Retrieved events: ", votingEvents);
-					for (const event of votingEvents) {
-						if (event.result === 'ACCEPTED') {
-							acceptedProposals = [...acceptedProposals, event.title];
-						} else if (event.result === 'REJECTED') {
-							rejectedProposals = [...rejectedProposals, event.title];
-						}
+	const sys = $gameState.voting_system;
+	const voterScore = $currentUser.extraInfo?.[sys]?.current_score ?? 0;
+	const partyScore = $currentUser.partyExtraInfo?.[sys]?.current_score ?? 0;
 
-						const extra = event.extra_info?.MAJORITY_WITH_REWARD;
-						if (extra) {
-							isMajorityWithReward = true;
-						}
-					}
-					const totalQ = votingEvents.length;
-					console.log("Voting events retrieved: ", totalQ);
-				})
-				.catch(e => console.error("Failed to load voting events", e));
+	$effect(async () => {
+		const roundId = $gameState.current_round_id;
+		if (!roundId) return;
+
+		try {
+			const res = await fetch(`${PUBLIC_BACKEND_URL}/round/${roundId}/voting_events`);
+			const events = await res.json();
+
+			for (const ev of events) {
+				if (ev.result === 'ACCEPTED') {
+					acceptedProposals.push(ev.title);
+				} else if (ev.result === 'REJECTED') {
+					rejectedProposals.push(ev.title);
+				}
+				if (ev.extra_info?.MAJORITY_WITH_REWARD) {
+					isMajorityWithReward = true;
+				}
 			}
+		} catch (e) {
+			console.error('Failed to load voting events', e);
 		}
-	);
+	});
 </script>
 
 <div class="welcome-container mt-8 flex w-full flex-col items-center justify-center space-y-4">
@@ -59,26 +46,26 @@
 	{#if isMajorityWithReward}
 		<p>Your points: {voterScore}</p>
 		<p>Your party's points: {partyScore}</p>
-  	{/if}
+	{/if}
 
 	<p>Proposals that were accepted:</p>
-	<ul>
+	<ul class="list-disc">
 		{#if acceptedProposals.length > 0}
-		  {#each acceptedProposals as proposal}
-			<li>{proposal}</li>
-		  {/each}
+			{#each acceptedProposals as proposal}
+				<li>{proposal}</li>
+			{/each}
 		{:else}
-		  <li>No proposals were accepted.</li>
+			<li>No proposals were accepted.</li>
 		{/if}
-	  </ul>
+	</ul>
 	<p>Proposals that were rejected:</p>
-	<ul>
+	<ul class="list-disc">
 		{#if rejectedProposals.length > 0}
-		  {#each rejectedProposals as proposal}
-			<li>{proposal}</li>
-		  {/each}
+			{#each rejectedProposals as proposal}
+				<li>{proposal}</li>
+			{/each}
 		{:else}
-		  <li>No proposals were rejected.</li>
+			<li>No proposals were rejected.</li>
 		{/if}
-	  </ul>
+	</ul>
 </div>
