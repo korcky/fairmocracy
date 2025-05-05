@@ -25,6 +25,8 @@
 	}
 </script>
 
+<!-- DEBUG -->
+<!--
 <button
 	class="btn-primary debug"
 	onclick={() => {
@@ -42,6 +44,7 @@
 	<h1>Debug: User</h1>
 	<pre>Debug currentUser: {JSON.stringify($currentUser, null, 2)}</pre>
 {/if}
+-->
 
 <form class="mx-auto my-8 w-full max-w-md space-y-4" onsubmit={handleSubmit}>
 	<label class="label">
@@ -64,9 +67,6 @@
 </form>
 
 <style>
-	.debug {
-		color: black;
-	}
 	.btn {
 		color: white;
 		transition-property: all;

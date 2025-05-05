@@ -39,6 +39,8 @@
 	});
 </script>
 
+<!-- DEBUG CODE -->
+<!-- 
 <button
 	class="btn-primary btn"
 	on:click={() => {
@@ -60,6 +62,7 @@
 	<h1>Debug: Screen</h1>
 	<pre>Debug currentScreen: {JSON.stringify($currentScreen, null, 2)}</pre>
 {/if}
+-->
 
 {#if $currentScreen === 'admin'}
 	<AdminView />
