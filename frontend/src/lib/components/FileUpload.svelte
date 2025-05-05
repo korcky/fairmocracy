@@ -42,7 +42,7 @@
 						votes: {}
 					});
 					alert(
-						`Game created successfully!\nGame Code: ${result.game_code}\nGame ID: ${result.game_id}\nGame Name: ${result.game_name}`
+						`Game created successfully!\nGame Code: ${result.game_code}\nGame ID: ${result.game_id}\nGame Name: ${result.game_name}\nNum Rounds: ${result.num}`
 					);
 					goto('/');
 				} else {
@@ -53,6 +53,7 @@
 					} catch (_) {
 						// fallback to raw text
 						errMsg = await response.text();
+						console.error(errMsg);
 					}
 					alert(`Upload failed:\n${errMsg}`);
 				}

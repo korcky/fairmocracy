@@ -1,6 +1,6 @@
 <script>
 	import { z } from 'zod';
-	import { setUserData, currentUser } from '$lib/stores/userData.svelte.js';
+	import { setUserData, currentUser, getExtraInfo } from '$lib/stores/userData.svelte.js';
 	import { gameState, parties } from '$lib/stores/gameData.svelte.js';
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
@@ -48,9 +48,13 @@
 			setUserData({
 				affiliations: {
 					...user.affiliations,
-					[affiliation.round_id]: affiliation.party_id
+					[affiliation.round_id]: {
+						affiliation_id: affiliation.id,
+						party_id: affiliation.party_id
+					}
 				}
 			});
+			getExtraInfo();
 		} catch (e) {
 			console.error('[RegisterToVote] error', e);
 			errors = { api: ['Something went wrong'] };

@@ -79,6 +79,12 @@ class AbstractEngine(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def get_voting_events(self, round_id: int) -> list[VotingEvent]:
+        """Return all VotingEvents in the given round"""
+        pass
+
+
+    @abstractmethod
     def update_voting_event(
         self, voting_event_id: int, voting_result: VotingResult, extra_info: dict | None = None
     ) -> None:

@@ -33,6 +33,7 @@ export async function loadParties(gameId) {
 		const data = await res.json();
 		console.log('[gameData] loaded parties:', data);
 		parties.set(data);
+		console.log('Parties loaded:', data);
 	} catch (e) {
 		console.error('[gameData] Failed to load parties:', e);
 	}

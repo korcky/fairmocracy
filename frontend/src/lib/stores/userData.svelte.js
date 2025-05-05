@@ -7,6 +7,7 @@ let _lastLoadedUserId = null;
 let _lastLoadedEventId = null; // To check whether we fetch new extra info
 let _inFlightUserExtra = false; // Flag to add extra safety to prevent getExtraInfo from fetching user multiple times
 let _inFlightPartyExtra = false; // Same as above but for user's party
+let _lastLoadedAffiliationId = null;
 
 export const currentUser = writable(
 	(browser && JSON.parse(localStorage.getItem('userData'))) || {
@@ -57,17 +58,35 @@ export function clearUserData() {
 
 export async function getExtraInfo() {
 	const { userId, gameId, affiliations } = get(currentUser);
-	const { current_round_id: roundId, current_voting_event_id: eventId } = get(gameState);
-	if (!userId || !gameId || !roundId || !eventId) return;
+	const {
+		current_round_id: roundId,
+		current_voting_event_id: eventId,
+		voting_system: sys,
+		extra_info: extra
+	} = get(gameState);
+
+	if (!userId || !gameId || !roundId || !eventId || !sys || !extra) {
+		return;
+	}
+
+	const { affiliation_id: currentAffId, party_id: userPartyId } = affiliations[roundId] || {};
 
 	if (userId !== _lastLoadedUserId) {
 		_lastLoadedEventId = null;
+		_lastLoadedAffiliationId = null;
 	}
 
-	if (eventId === _lastLoadedEventId) return;
+	if (currentAffId !== _lastLoadedAffiliationId) {
+		_lastLoadedEventId = null;
+	}
 
-	_lastLoadedEventId = eventId;
+	if (eventId === _lastLoadedEventId) {
+		return;
+	}
+
 	_lastLoadedUserId = userId;
+	_lastLoadedEventId = eventId;
+	_lastLoadedAffiliationId = currentAffId;
 
 	// User's personal extra info
 	if (!_inFlightUserExtra) {
@@ -79,54 +98,46 @@ export async function getExtraInfo() {
 				setUserData({ extraInfo: extra_info });
 			}
 		} catch (e) {
-			console.error('Failed to load user extraInfo', e);
+			console.error('[getExtraInfo] Failed to load user extraInfo', e);
 		} finally {
 			_inFlightUserExtra = false;
 		}
 	}
 
 	// Extra info for the user's party
-	const userPartyId = affiliations[roundId];
 	if (userPartyId && !_inFlightPartyExtra) {
 		_inFlightPartyExtra = true;
 		try {
 			const res = await fetch(`${PUBLIC_BACKEND_URL}/game/${gameId}/parties`);
 			if (res.ok) {
 				const parties = await res.json();
-				const userPartyData = parties.find((p) => p.id === userPartyId);
-				if (userPartyData) setUserData({ partyExtraInfo: userPartyData?.extra_info || {} });
+				const p = parties.find((x) => x.id === userPartyId);
+				setUserData({ partyExtraInfo: p?.extra_info || {} });
 			}
 		} catch (e) {
-			console.error('Failed to load party extraInfo', e);
+			console.error('[getExtraInfo] Failed to load party extraInfo', e);
 		} finally {
 			_inFlightPartyExtra = false;
 		}
 	}
 
-	// Get possible rewards for the event
-	const gs = get(gameState);
-	const evtId = gs.current_voting_event_id;
-	if (!evtId) return;
+	const tables = extra[sys] || { ACCEPTED: {}, REJECTED: {} };
 
-	const sys = gs.voting_system;
-	const tables = gs.extra_info?.[sys] || { ACCEPTED: {}, REJECTED: {} };
-
-	const uid = String(get(currentUser).userId);
-	const pid = String(get(currentUser).affiliations[gs.current_round_id]);
-
-	const acceptedVoters = tables.ACCEPTED?.voters || {};
-	const rejectedVoters = tables.REJECTED?.voters || {};
-	const acceptedParties = tables.ACCEPTED?.parties || {};
-	const rejectedParties = tables.REJECTED?.parties || {};
+	const uid = String(userId);
+	const pid = String(userPartyId);
 
 	const userRewards = {
-		accepted: acceptedVoters[uid] ?? 0,
-		rejected: rejectedVoters[uid] ?? 0
-	};
-	const partyRewards = {
-		accepted: acceptedParties[pid] ?? 0,
-		rejected: rejectedParties[pid] ?? 0
+		accepted: tables.ACCEPTED.voters?.[uid] ?? 0,
+		rejected: tables.REJECTED.voters?.[uid] ?? 0
 	};
 
-	setUserData({ eventRewards: userRewards, partyEventRewards: partyRewards });
+	const partyRewards = {
+		accepted: tables.ACCEPTED.parties?.[pid] ?? 0,
+		rejected: tables.REJECTED.parties?.[pid] ?? 0
+	};
+
+	setUserData({
+		eventRewards: userRewards,
+		partyEventRewards: partyRewards
+	});
 }
