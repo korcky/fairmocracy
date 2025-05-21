@@ -150,6 +150,8 @@ async def startup_event():
 )
 async def get_user(user_id: str, db_engine: AbstractEngine = Depends(get_db_engine)) -> Voter:
     """
+    Returns information about user
+
     Structure for extra_info
     {
         voting_system_name: {
@@ -193,6 +195,13 @@ async def get_current_state(
 )
 @broadcast_game_state
 async def cast_vote(vote: Vote, db_engine: AbstractEngine = Depends(get_db_engine)):
+    """
+    Casts a vote (`YES/NO/ABSTAIN`) of a specific users for a specific voting event
+    
+    If it's a "last vote to be cast" -- conclude the voting event automatically: decides
+    if it's `ACCEPTED` or `REJECTED`  (based on the voting system) and calculate any other
+    requiered metrics (based on the voting system)
+    """
     # TODO probably some more checks ...
     voting_event = db_engine.get_voting_event(vote.voting_event_id)
     round = db_engine.get_round(voting_event.round_id)
@@ -259,6 +268,8 @@ async def read_parties_by_game(
     game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ) -> list[Party]:
     """
+    Returns information about parties for the specified game
+
     Structure for extra_info
     {
         voting_system_name: {
@@ -281,6 +292,7 @@ async def read_game(
     game_id: int,
     db_engine: AbstractEngine = Depends(get_db_engine),
 ) -> Game:
+    """Returns infromation about specified game"""
     return db_engine.get_game(game_id=game_id)
 
 
@@ -291,7 +303,9 @@ async def read_game(
 async def get_rounds_by_game(
     game_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ) -> list[Round]:
+    """Returns information about rounds for the specified game"""
     return db_engine.get_rounds(game_id=game_id)
+
 
 @common_router.get(
         "/round/{round_id}/voting_events",
@@ -299,6 +313,7 @@ async def get_rounds_by_game(
 async def get_voting_events_by_round(
     round_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ) -> list[VotingEvent]:
+    """Returns voting event for the specified round"""
     return db_engine.get_voting_events(round_id=round_id)
 
 
@@ -309,6 +324,7 @@ async def get_voting_events_by_round(
 async def get_game_by_hash(
     game_hash: str, db_engine: AbstractEngine = Depends(get_db_engine)
 ) -> Game:
+    """Returns infromation about specified game (uses game hash to identify the game)"""
     try:
         return db_engine.get_game_by_hash(game_hash=game_hash)
     except Exception:
@@ -323,6 +339,7 @@ async def get_game_by_hash(
 async def register_user(
     user: Voter, db_engine: AbstractEngine = Depends(get_db_engine)
 ) -> JSONResponse:
+    """Create a user to be a part of a cpecified game"""
     voter = db_engine.add_voter(voter=user)
     payload = {
         "id": voter.id,
@@ -341,6 +358,7 @@ async def register_to_vote(
     affiliation: Affiliation,
     db_engine: AbstractEngine = Depends(get_db_engine),
 ) -> Affiliation:
+    """Creates  a connection between user and a party for a specific round of a game"""
     new_aff = db_engine.add_affiliation(affiliation=affiliation)
 
     voter = db_engine.get_voter(new_aff.voter_id)
@@ -381,6 +399,7 @@ async def upload_config(
     file: UploadFile = File(...),
     db_engine: AbstractEngine = Depends(get_db_engine),
 ):
+    """Creates a game (all needed entities for it) in the DB based on the profided configuration file"""
     try:
         raw_bytes = await file.read()
 
@@ -442,6 +461,7 @@ async def upload_config(
 async def get_voting_event(
     voting_event_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ):
+    """Returns information about specified voting event"""
     return db_engine.get_voting_event(voting_event_id=voting_event_id)
 
 
@@ -453,6 +473,10 @@ async def get_voting_event(
 async def conclude_voting(
     voting_event_id: int, db_engine: AbstractEngine = Depends(get_db_engine)
 ):
+    """
+    Concludes the voting event automatically: decides if it's `ACCEPTED` or `REJECTED` 
+    (based on the voting system) and calculate any other requiered metrics (based on the voting system)
+    """
     voting_event = db_engine.get_voting_event(voting_event_id=voting_event_id)
     voting_system_cls = AVAILABLE_VOTING_SYSTEM_CLS.get(voting_event.voting_system)
     if not voting_system_cls:
@@ -484,6 +508,7 @@ async def conclude_voting(
 
 @common_router.api_route("/sse/game-state", methods=["GET", "POST"])
 async def stream_game_state():
+    """Connects a clinet to listen for game state updates"""
     return StreamingResponse(
         connection_manager.connect(), media_type="text/event-stream"
     )
