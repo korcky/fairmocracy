@@ -16,7 +16,7 @@ def upload_configuration(
 ) -> sql_models.Game:
     """will work only with one active game"""
     if number_of_real_voters >= configuration["n_voters"]:
-        raise Exception("only work with at least on simulated voter")
+        raise Exception("only work with at least one simulated voter")
 
     with Session(DB_ENGINE.engine) as session:
         game = sql_models.Game(
@@ -149,6 +149,7 @@ def upload_configuration(
 
         session.commit()
 
+        # TODO: refactor to work with 0 simulated voters
         if number_of_real_voters <= 0:
             session.add(game)
             game.current_round_id = rounds_map[min(rounds)].id
